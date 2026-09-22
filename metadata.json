@@ -1,0 +1,6 @@
+{
+  "name": "Месопотамія: Царства",
+  "description": "Покрокова історична стратегія у стилі класичного Rome: Total War про перші держави Межиріччя, з навчальними вікторинами для 6 класу.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

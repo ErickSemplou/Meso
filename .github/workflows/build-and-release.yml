@@ -1,0 +1,103 @@
+name: Build & Release Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Створити GitHub Release з APK файлом?'
+        required: false
+        type: boolean
+        default: false
+      release_title:
+        description: 'Назва релізу (необов’язково)'
+        required: false
+        type: string
+        default: 'Месопотамія: Царства (Android APK)'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: 🏗️ Збірка Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Клонування репозиторію
+        uses: actions/checkout@v4
+
+      - name: ☕ Встановлення JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: 🐘 Налаштування Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 🔑 Підготовка Debug Keystore
+        run: |
+          if [ -f "debug.keystore.base64" ]; then
+            base64 -d debug.keystore.base64 > debug.keystore
+          elif [ ! -f "debug.keystore" ]; then
+            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+      - name: ⚙️ Перевірка та надання прав gradlew
+        run: |
+          if [ ! -f "gradlew" ]; then
+            gradle wrapper
+          fi
+          chmod +x gradlew
+
+      - name: 🚀 Збірка APK (assembleDebug)
+        run: |
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: 📦 Підготовка файлу APK для завантаження
+        run: |
+          mkdir -p release-artifacts
+          find app/build/outputs/apk/debug/ -name "*.apk" -exec cp {} release-artifacts/Mesopotamia-Kingdoms-Strategy-v1.0.apk \;
+          echo "Знайдено APK файли:"
+          ls -lh release-artifacts/
+
+      - name: 💾 Завантаження артефакту (Direct Download)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mesopotamia-Kingdoms-Strategy-APK
+          path: release-artifacts/*.apk
+          retention-days: 30
+
+      - name: 🏷️ Публікація GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.event.inputs.release_title || github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          files: release-artifacts/*.apk
+          draft: false
+          prerelease: false
+          body: |
+            ## 🏛️ Месопотамія: Царства — Гра Бронзової Доби
+            
+            Покрокова історична стратегія у стилі класичного Rome: Total War з навчальними вікторинами з історії стародавнього світу для 6 класу.
+
+            ### 📱 Як встановити APK на Android:
+            1. Завантажте файл `Mesopotamia-Kingdoms-Strategy-v1.0.apk` нижче.
+            2. Відкрийте файл на своєму смартфоні або планшеті Android.
+            3. Якщо з'явиться запит, дозвольте «Встановлення з невідомих джерел» для вашого браузера/провідника.
+            4. Натисніть **Встановити** та насолоджуйтеся грою!
+
+            ### ✨ Оновлення версії:
+            - Об'ємна 3D-карта Межиріччя з річками Тигр, Євфрат і горами Загросу.
+            - Тривимірні моделі міст-держав і гарнізонів у стилі Total War.
+            - Будівлі та військові загони з ілюстраціями та навчальними фактами.
+            - Кампанія на 50 ходів з фінальним підсумковим екраном і присвоєнням титулу.
+            - Повноцінний ландшафтний режим екрана.

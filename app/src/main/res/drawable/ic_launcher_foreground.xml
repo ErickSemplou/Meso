@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Stepped Ziggurat of Ur in warm gold/bronze and terracotta -->
+    <!-- Sun of Shamash / Golden radiance above the temple -->
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M54,26 A6,6 0 1,0 54,38 A6,6 0 1,0 54,26 Z" />
+    <path
+        android:fillColor="#FFE082"
+        android:pathData="M54,22 L54,25 M54,39 L54,42 M46,32 L43,32 M62,32 L65,32 M48,26 L46,24 M60,38 L62,40 M48,38 L46,40 M60,26 L62,24"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FFD54F"
+        android:strokeLineCap="round" />
+
+    <!-- Top shrine (Temple of Nanna / Sin) -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M50,42 L58,42 L57,48 L51,48 Z" />
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M53,44 L55,44 L55,48 L53,48 Z" />
+
+    <!-- Tier 3 -->
+    <path
+        android:fillColor="#D4A373"
+        android:pathData="M46,48 L62,48 L65,56 L43,56 Z" />
+
+    <!-- Tier 2 -->
+    <path
+        android:fillColor="#BC6C25"
+        android:pathData="M40,56 L68,56 L72,66 L36,66 Z" />
+
+    <!-- Tier 1 (Base platform) -->
+    <path
+        android:fillColor="#8C461E"
+        android:pathData="M32,66 L76,66 L80,78 L28,78 Z" />
+
+    <!-- Central Grand Staircase -->
+    <path
+        android:fillColor="#FFE8D6"
+        android:pathData="M52,48 L56,48 L58,78 L50,78 Z" />
+    <path
+        android:fillColor="#DDA15E"
+        android:pathData="M51,54 L57,54 L57,55 L51,55 Z M50.5,60 L57.5,60 L57.5,61 L50.5,61 Z M50,67 L58,67 L58,68 L50,68 Z M49.5,73 L58.5,73 L58.5,74 L49.5,74 Z" />
+
+    <!-- Euphrates / Tigris River waves in lapis lazuli blue -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#29B6F6"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:pathData="M24,83 Q34,80 44,83 T64,83 T84,83" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#0288D1"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:pathData="M26,87 Q36,84 46,87 T66,87 T82,87" />
+</vector>
