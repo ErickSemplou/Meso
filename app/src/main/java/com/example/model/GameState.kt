@@ -13,9 +13,6 @@ data class GameState(
     val currentTechId: String? = null,
     val currentTechTurnsRemaining: Int = 0,
     val activeEvent: GameEvent? = null,
-    val pendingQuiz: QuizQuestion? = null,
-    val completedQuizIds: Set<String> = emptySet(),
-    val correctQuizCount: Int = 0,
     val chronicleLog: List<String> = listOf("2600 р. до н.е.: Правитель зійшов на престол міста. Розпочалася епоха перших держав Межиріччя!"),
     val isVictory: Boolean = false,
     val isDefeat: Boolean = false,
@@ -47,6 +44,66 @@ data class GameState(
 
     val totalMilitaryPower: Int
         get() = playerCities.sumOf { it.totalMilitaryPower }
+
+    // Net income calculations per turn
+    val netIncomeGrain: Int
+        get() {
+            var inc = 30
+            playerCities.forEach { city ->
+                city.buildings.forEach { bldId ->
+                    inc += Building.getById(bldId).incomeGrain
+                }
+                inc += city.bonusGrain
+            }
+            if (researchedTechIds.contains("seed_plow")) inc = (inc * 1.35).toInt()
+            val totalTroops = playerCities.sumOf { it.garrison.values.sum() }
+            val foodUpkeep = totalTroops * 4
+            return inc - foodUpkeep
+        }
+
+    val netIncomeClay: Int
+        get() {
+            var inc = 25
+            playerCities.forEach { city ->
+                city.buildings.forEach { bldId ->
+                    inc += Building.getById(bldId).incomeClay
+                }
+                inc += city.bonusClay
+            }
+            if (researchedTechIds.contains("pottery_wheel")) inc = (inc * 1.20).toInt()
+            return inc
+        }
+
+    val netIncomeBronze: Int
+        get() {
+            var inc = 10
+            playerCities.forEach { city ->
+                city.buildings.forEach { bldId ->
+                    inc += Building.getById(bldId).incomeBronze
+                }
+                inc += city.bonusBronze
+            }
+            if (playerFactionId == "lagash") inc = (inc * 1.20).toInt()
+            return inc
+        }
+
+    val netIncomeSilver: Int
+        get() {
+            var inc = 35
+            playerCities.forEach { city ->
+                city.buildings.forEach { bldId ->
+                    inc += Building.getById(bldId).incomeSilver
+                }
+                inc += city.bonusSilver
+            }
+            if (playerFactionId == "ur") inc = (inc * 1.25).toInt()
+            if (researchedTechIds.contains("cuneiform")) inc = (inc * 1.15).toInt()
+            // Trade pact bonus
+            relations.values.filter { it.status == DiplomaticStatus.TRADE_PACT }.forEach {
+                inc += 20
+            }
+            return inc
+        }
 
     companion object {
         fun defaultRelations(): Map<String, FactionRelation> {

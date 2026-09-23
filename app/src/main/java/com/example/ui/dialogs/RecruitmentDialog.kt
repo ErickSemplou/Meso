@@ -43,6 +43,7 @@ import com.example.R
 import com.example.model.City
 import com.example.model.PlayerResources
 import com.example.model.UnitType
+import com.example.ui.components.UnitAvatar
 import com.example.ui.theme.AncientParchment
 import com.example.ui.theme.AncientParchmentLight
 import com.example.ui.theme.BronzeDark
@@ -173,8 +174,11 @@ fun RecruitmentDialog(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.weight(1f)
                                     ) {
-                                        Text(text = unitEmoji, fontSize = 20.sp)
-                                        Spacer(modifier = Modifier.width(6.dp))
+                                        UnitAvatar(
+                                            unitId = unit.id,
+                                            size = 38.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
                                         Column {
                                             Text(
                                                 text = unit.name,

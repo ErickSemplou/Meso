@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.HourglassBottom
 import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material.icons.filled.Science
-import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material3.Button
@@ -60,7 +59,6 @@ fun RomeCommandBar(
     onOpenBuildingDialog: () -> Unit,
     onOpenRecruitmentDialog: () -> Unit,
     onOpenDiplomacyDialog: () -> Unit,
-    onOpenTradeDialog: () -> Unit,
     onOpenTechDialog: () -> Unit,
     onAttackCity: () -> Unit,
     onEndTurn: () -> Unit,
@@ -82,20 +80,20 @@ fun RomeCommandBar(
                 .padding(horizontal = 8.dp, vertical = 6.dp)
                 .fillMaxWidth()
         ) {
-            // Left: Selected City Overview Card
+            // Left: Selected City Overview Card with Unit Avatars & City Trait
             if (selectedCity != null) {
                 val cityFaction = Faction.getById(selectedCity.factionId)
                 Surface(
                     color = AncientParchmentLight,
-                    shape = RoundedCornerShape(6.dp),
+                    shape = RoundedCornerShape(8.dp),
                     border = androidx.compose.foundation.BorderStroke(1.5.dp, cityFaction.bannerColor),
-                    modifier = Modifier.width(220.dp)
+                    modifier = Modifier.width(310.dp)
                 ) {
                     Column(modifier = Modifier.padding(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(10.dp)
+                                    .size(12.dp)
                                     .clip(CircleShape)
                                     .background(cityFaction.bannerColor)
                             )
@@ -106,35 +104,76 @@ fun RomeCommandBar(
                                 fontWeight = FontWeight.Bold,
                                 color = BronzeDark
                             )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            // City Unique Trait Badge
+                            Surface(
+                                color = SumerianGold.copy(alpha = 0.35f),
+                                shape = RoundedCornerShape(4.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, BronzeDark)
+                            ) {
+                                Text(
+                                    text = selectedCity.uniqueTrait,
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BronzeDark,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
                             Spacer(modifier = Modifier.weight(1f))
                             Text(
                                 text = if (isPlayerOwned) "Наше місто" else cityFaction.name,
-                                fontSize = 10.sp,
+                                fontSize = 9.sp,
                                 color = if (isPlayerOwned) Color(0xFF2E7D32) else TerracottaRed,
                                 fontWeight = FontWeight.Bold
                             )
                         }
 
-                        Text(
-                            text = "Населення: ${selectedCity.population} • ${selectedCity.river}",
-                            fontSize = 9.sp,
-                            color = Color(0xFF5D4037)
-                        )
-
-                        val garrisonSummary = selectedCity.garrison.entries.joinToString(", ") { "${it.value}x ${it.key}" }
-                        Text(
-                            text = "Гарнізон: ${selectedCity.garrison.values.sum()} полків (Захист: ${selectedCity.defenseRating})",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = BronzeDark
-                        )
+                        // Garrison Units with Avatars
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "Війська: ",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BronzeDark
+                            )
+                            selectedCity.garrison.forEach { (unitId, count) ->
+                                if (count > 0) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .background(AncientParchmentDark, RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 3.dp, vertical = 1.dp)
+                                    ) {
+                                        UnitAvatar(unitId = unitId, size = 18.dp)
+                                        Spacer(modifier = Modifier.width(2.dp))
+                                        Text(
+                                            text = "x$count",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = BronzeDark
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(
+                                text = "🛡️ ${selectedCity.defenseRating}",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BronzeDark
+                            )
+                        }
 
                         if (selectedCity.buildingInProgress != null) {
                             val bld = Building.getById(selectedCity.buildingInProgress)
                             Text(
-                                text = "Будується: ${bld.name} (${selectedCity.buildingTurnsRemaining} хід)",
-                                fontSize = 9.sp,
-                                color = SumerianGold,
+                                text = "⏳ Будується: ${bld.name} (${selectedCity.buildingTurnsRemaining} х.)",
+                                fontSize = 8.sp,
+                                color = BronzePrimary,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -142,10 +181,10 @@ fun RomeCommandBar(
                 }
             } else {
                 Text(
-                    text = "Оберіть місто на карті",
-                    fontSize = 12.sp,
+                    text = "Оберіть місто на карті для управління",
+                    fontSize = 11.sp,
                     color = BronzeDark,
-                    modifier = Modifier.width(200.dp)
+                    modifier = Modifier.width(260.dp)
                 )
             }
 
@@ -169,7 +208,7 @@ fun RomeCommandBar(
                         onClick = onOpenRecruitmentDialog
                     )
                 } else if (selectedCity != null) {
-                    // Foreign city: Option to march / launch military campaign!
+                    // Foreign city: Option to launch military campaign!
                     Button(
                         onClick = onAttackCity,
                         colors = ButtonDefaults.buttonColors(
@@ -178,7 +217,7 @@ fun RomeCommandBar(
                         ),
                         shape = RoundedCornerShape(6.dp),
                         modifier = Modifier
-                            .height(48.dp)
+                            .height(46.dp)
                             .testTag("attack_city_button")
                     ) {
                         Icon(
@@ -196,13 +235,6 @@ fun RomeCommandBar(
                     title = "Дипломатія",
                     testTag = "tab_diplomacy",
                     onClick = onOpenDiplomacyDialog
-                )
-
-                CommandTabButton(
-                    icon = Icons.Default.Storefront,
-                    title = "Торгівля",
-                    testTag = "tab_trade",
-                    onClick = onOpenTradeDialog
                 )
 
                 CommandTabButton(
@@ -224,7 +256,7 @@ fun RomeCommandBar(
                 shape = RoundedCornerShape(8.dp),
                 border = androidx.compose.foundation.BorderStroke(2.dp, BronzeDark),
                 modifier = Modifier
-                    .height(52.dp)
+                    .height(50.dp)
                     .width(136.dp)
                     .testTag("end_turn_button")
             ) {
@@ -246,7 +278,7 @@ fun RomeCommandBar(
                     }
                     Text(
                         text = "Хід гравця",
-                        fontSize = 9.sp,
+                        fontSize = 8.sp,
                         color = Color(0xFF4E342E)
                     )
                 }

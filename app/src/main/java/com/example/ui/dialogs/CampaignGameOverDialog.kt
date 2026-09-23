@@ -46,14 +46,12 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.R
 import com.example.model.GameState
 import com.example.ui.theme.AncientParchment
-import com.example.ui.theme.AncientParchmentDark
 import com.example.ui.theme.AncientParchmentLight
 import com.example.ui.theme.BronzeDark
 import com.example.ui.theme.BronzePrimary
 import com.example.ui.theme.ClaySlate
 import com.example.ui.theme.SumerianGold
 import com.example.ui.theme.SumerianGoldBright
-import com.example.ui.theme.TerracottaRed
 
 @Composable
 fun CampaignGameOverDialog(
@@ -71,13 +69,6 @@ fun CampaignGameOverDialog(
         controlledCount >= 2 -> "«Енсі» (Священний Правитель-Будівничий)"
         isTotalDefeat -> "«Зруйнований Трон»"
         else -> "«Випробуваний Часом»"
-    }
-
-    val historyGrade = when {
-        state.correctQuizCount >= 15 -> "Відмінно (12 балів) ⭐⭐⭐"
-        state.correctQuizCount >= 10 -> "Добре (10 балів) ⭐⭐"
-        state.correctQuizCount >= 5 -> "Задовільно (7 балів) ⭐"
-        else -> "Початківець (Спробуйте ще!)"
     }
 
     Dialog(
@@ -137,7 +128,7 @@ fun CampaignGameOverDialog(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = if (isVictory) "ТРІУМФ ШУМЕРСЬКОЇ ДЕРЖАВИ!" else if (isTotalDefeat) "ПАДІННЯ ЦАРСТВА" else "ПІДСУМОК 50 ХОДІВ ПРАВЛІННЯ",
-                            fontSize = 15.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Black,
                             color = SumerianGoldBright,
                             letterSpacing = 1.sp
@@ -183,7 +174,7 @@ fun CampaignGameOverDialog(
                         modifier = Modifier.weight(1f)
                     )
                     GameOverStatCard(
-                        title = "Населення імперії",
+                        title = "Населення царства",
                         value = "${state.totalControlledPopulation}",
                         emoji = "👥",
                         modifier = Modifier.weight(1f)
@@ -203,10 +194,9 @@ fun CampaignGameOverDialog(
                         modifier = Modifier.weight(1f)
                     )
                     GameOverStatCard(
-                        title = "Вікторина (6 клас)",
-                        value = "${state.correctQuizCount} прав.",
-                        emoji = "🧠",
-                        subtitle = historyGrade,
+                        title = "Військова міць",
+                        value = "${state.totalMilitaryPower} сили",
+                        emoji = "⚔️",
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -264,7 +254,6 @@ private fun GameOverStatCard(
     title: String,
     value: String,
     emoji: String,
-    subtitle: String? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -288,15 +277,6 @@ private fun GameOverStatCard(
                 fontWeight = FontWeight.Black,
                 color = BronzeDark
             )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    fontSize = 8.sp,
-                    color = Color(0xFF1B5E20),
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-            }
         }
     }
 }

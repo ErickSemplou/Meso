@@ -55,7 +55,6 @@ class GameRepository(context: Context) {
             root.put("turn", state.turn)
             root.put("yearBCE", state.yearBCE)
             root.put("playerFactionId", state.playerFactionId)
-            root.put("correctQuizCount", state.correctQuizCount)
             root.put("isVictory", state.isVictory)
             root.put("isDefeat", state.isDefeat)
             root.put("currentTechId", state.currentTechId ?: "")
@@ -85,6 +84,13 @@ class GameRepository(context: Context) {
                 cObj.put("river", city.river)
                 cObj.put("population", city.population)
                 cObj.put("loyalty", city.loyalty)
+                cObj.put("uniqueTrait", city.uniqueTrait)
+                cObj.put("traitDescription", city.traitDescription)
+                cObj.put("bonusGrain", city.bonusGrain)
+                cObj.put("bonusClay", city.bonusClay)
+                cObj.put("bonusBronze", city.bonusBronze)
+                cObj.put("bonusSilver", city.bonusSilver)
+                cObj.put("bonusDefense", city.bonusDefense)
                 cObj.put("buildingInProgress", city.buildingInProgress ?: "")
                 cObj.put("buildingTurnsRemaining", city.buildingTurnsRemaining)
                 cObj.put("historyFact", city.historyFact)
@@ -139,11 +145,6 @@ class GameRepository(context: Context) {
             state.researchedTechIds.forEach { techsArray.put(it) }
             root.put("researchedTechIds", techsArray)
 
-            // Completed Quizzes
-            val quizArray = JSONArray()
-            state.completedQuizIds.forEach { quizArray.put(it) }
-            root.put("completedQuizIds", quizArray)
-
             // Chronicle
             val chronArray = JSONArray()
             state.chronicleLog.takeLast(25).forEach { chronArray.put(it) }
@@ -165,7 +166,6 @@ class GameRepository(context: Context) {
             val turn = root.getInt("turn")
             val yearBCE = root.getInt("yearBCE")
             val playerFactionId = root.getString("playerFactionId")
-            val correctQuizCount = root.optInt("correctQuizCount", 0)
             val isVictory = root.optBoolean("isVictory", false)
             val isDefeat = root.optBoolean("isDefeat", false)
             val currentTechId = root.optString("currentTechId").takeIf { it.isNotEmpty() }
@@ -197,6 +197,13 @@ class GameRepository(context: Context) {
                 val river = cObj.getString("river")
                 val population = cObj.getInt("population")
                 val loyalty = cObj.optInt("loyalty", 80)
+                val uniqueTrait = cObj.optString("uniqueTrait", "Місто Бронзової доби")
+                val traitDescription = cObj.optString("traitDescription", "")
+                val bonusGrain = cObj.optInt("bonusGrain", 0)
+                val bonusClay = cObj.optInt("bonusClay", 0)
+                val bonusBronze = cObj.optInt("bonusBronze", 0)
+                val bonusSilver = cObj.optInt("bonusSilver", 0)
+                val bonusDefense = cObj.optInt("bonusDefense", 0)
                 val buildingInProgress = cObj.optString("buildingInProgress").takeIf { it.isNotEmpty() }
                 val buildingTurnsRemaining = cObj.optInt("buildingTurnsRemaining", 0)
                 val historyFact = cObj.getString("historyFact")
@@ -233,6 +240,13 @@ class GameRepository(context: Context) {
                         mapY = mapY,
                         river = river,
                         population = population,
+                        uniqueTrait = uniqueTrait,
+                        traitDescription = traitDescription,
+                        bonusGrain = bonusGrain,
+                        bonusClay = bonusClay,
+                        bonusBronze = bonusBronze,
+                        bonusSilver = bonusSilver,
+                        bonusDefense = bonusDefense,
                         buildings = bldList,
                         buildingInProgress = buildingInProgress,
                         buildingTurnsRemaining = buildingTurnsRemaining,
@@ -292,15 +306,6 @@ class GameRepository(context: Context) {
                 techs.add(techArray.getString(i))
             }
 
-            // Quizzes
-            val completedQuizzes = mutableSetOf<String>()
-            val qArray = root.optJSONArray("completedQuizIds")
-            if (qArray != null) {
-                for (i in 0 until qArray.length()) {
-                    completedQuizzes.add(qArray.getString(i))
-                }
-            }
-
             // Chronicle
             val chronicle = mutableListOf<String>()
             val chronArray = root.optJSONArray("chronicleLog")
@@ -321,8 +326,6 @@ class GameRepository(context: Context) {
                 researchedTechIds = techs,
                 currentTechId = currentTechId,
                 currentTechTurnsRemaining = currentTechTurnsRemaining,
-                completedQuizIds = completedQuizzes,
-                correctQuizCount = correctQuizCount,
                 chronicleLog = chronicle,
                 isVictory = isVictory,
                 isDefeat = isDefeat

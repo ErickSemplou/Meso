@@ -2,7 +2,6 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -15,7 +14,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import com.example.model.PlayerResources
 import com.example.ui.components.RomeCommandBar
 import com.example.ui.components.RomeTopBar
 import com.example.ui.components.StrategicMapCanvas
@@ -26,10 +24,8 @@ import com.example.ui.dialogs.CityManageDialog
 import com.example.ui.dialogs.CodexDialog
 import com.example.ui.dialogs.DiplomacyDialog
 import com.example.ui.dialogs.EventDialog
-import com.example.ui.dialogs.QuizDialog
 import com.example.ui.dialogs.RecruitmentDialog
 import com.example.ui.dialogs.TechTreeDialog
-import com.example.ui.dialogs.TradeDialog
 import com.example.ui.theme.AncientParchment
 import com.example.viewmodel.GameViewModel
 
@@ -50,7 +46,6 @@ fun CampaignMapScreen(
     var showBuildingDialog by remember { mutableStateOf(false) }
     var showRecruitmentDialog by remember { mutableStateOf(false) }
     var showDiplomacyDialog by remember { mutableStateOf(false) }
-    var showTradeDialog by remember { mutableStateOf(false) }
     var showTechDialog by remember { mutableStateOf(false) }
     var showCodexDialog by remember { mutableStateOf(false) }
     var showChronicleDialog by remember { mutableStateOf(false) }
@@ -74,7 +69,6 @@ fun CampaignMapScreen(
                 onOpenBuildingDialog = { showBuildingDialog = true },
                 onOpenRecruitmentDialog = { showRecruitmentDialog = true },
                 onOpenDiplomacyDialog = { showDiplomacyDialog = true },
-                onOpenTradeDialog = { showTradeDialog = true },
                 onOpenTechDialog = { showTechDialog = true },
                 onAttackCity = {
                     selectedCityId?.let { viewModel.launchMilitaryCampaign(it) }
@@ -91,7 +85,7 @@ fun CampaignMapScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .background(AncientParchment)
-                .padding(4.dp)
+                .padding(2.dp)
         ) {
             // Interactive Rome Total War Campaign Map
             StrategicMapCanvas(
@@ -137,36 +131,8 @@ fun CampaignMapScreen(
             onSendGift = { viewModel.sendDiplomaticGift(it) },
             onProposePeace = { viewModel.proposePeace(it) },
             onProposeTrade = { viewModel.proposeTrade(it) },
-            onDemandTribute = { viewModel.demandTribute(it) },
             onDeclareWar = { viewModel.declareWar(it) },
             onDismiss = { showDiplomacyDialog = false }
-        )
-    }
-
-    if (showTradeDialog) {
-        TradeDialog(
-            resources = state.resources,
-            tradeRoutes = state.tradeRoutes,
-            onExchangeGrainForSilver = {
-                if (state.resources.grain >= 40) {
-                    val nextRes = state.resources.copy(
-                        grain = state.resources.grain - 40,
-                        silver = state.resources.silver + 35
-                    )
-                    // Quick state update via repository or action
-                    showTradeDialog = false
-                }
-            },
-            onExchangeSilverForBronze = {
-                if (state.resources.silver >= 40) {
-                    val nextRes = state.resources.copy(
-                        silver = state.resources.silver - 40,
-                        bronze = state.resources.bronze + 25
-                    )
-                    showTradeDialog = false
-                }
-            },
-            onDismiss = { showTradeDialog = false }
         )
     }
 
@@ -189,19 +155,6 @@ fun CampaignMapScreen(
 
     if (showChronicleDialog) {
         ChronicleDialog(logs = state.chronicleLog, onDismiss = { showChronicleDialog = false })
-    }
-
-    // 6th-Grade Educational History Quiz Dialog (Triggered after each turn)
-    if (state.pendingQuiz != null) {
-        QuizDialog(
-            question = state.pendingQuiz!!,
-            onAnswerSubmitted = { optionIndex ->
-                viewModel.answerQuiz(optionIndex)
-            },
-            onDismiss = {
-                viewModel.dismissQuiz()
-            }
-        )
     }
 
     // Narrative Historical Event Dialog

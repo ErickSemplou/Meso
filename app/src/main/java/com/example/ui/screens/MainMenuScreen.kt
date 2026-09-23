@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.SavedGameSummary
 import com.example.model.Faction
+import com.example.ui.components.RulerPortraitCard
 import com.example.ui.theme.AncientParchment
 import com.example.ui.theme.AncientParchmentDark
 import com.example.ui.theme.AncientParchmentLight
@@ -484,7 +485,7 @@ private fun FactionSelectionView(
 
         // Faction Selection Carousel
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -492,63 +493,53 @@ private fun FactionSelectionView(
             items(Faction.ALL_PLAYABLE) { faction ->
                 val isSelected = faction.id == selectedFaction.id
                 Surface(
-                    color = if (isSelected) SumerianGold.copy(alpha = 0.25f) else AncientParchmentLight,
-                    shape = RoundedCornerShape(10.dp),
+                    color = if (isSelected) SumerianGold.copy(alpha = 0.22f) else AncientParchmentLight,
+                    shape = RoundedCornerShape(12.dp),
                     border = androidx.compose.foundation.BorderStroke(
                         if (isSelected) 3.dp else 1.5.dp,
                         if (isSelected) SumerianGold else BronzeDark
                     ),
-                    shadowElevation = if (isSelected) 8.dp else 2.dp,
+                    shadowElevation = if (isSelected) 10.dp else 2.dp,
                     modifier = Modifier
-                        .width(230.dp)
+                        .width(260.dp)
                         .clickable { onSelectFaction(faction) }
                         .testTag("faction_card_${faction.id}")
                 ) {
                     Column(
-                        modifier = Modifier.padding(10.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp)
+                            .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Faction crest
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(faction.bannerColor)
-                                .border(2.dp, SumerianGold, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = faction.name.take(2),
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        // AI Generated Ruler Portrait Image
+                        RulerPortraitCard(
+                            faction = faction,
+                            isSelected = isSelected,
+                            imageHeight = 135.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
                             text = faction.name,
-                            fontSize = 16.sp,
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.Black,
                             color = BronzeDark
                         )
                         Text(
                             text = faction.title,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = BronzePrimary
                         )
 
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Володар: ${faction.ruler}",
-                            fontSize = 10.sp,
-                            color = Color(0xFF4E342E)
-                        )
-                        Text(
                             text = "Покровитель: ${faction.patronDeity}",
-                            fontSize = 9.sp,
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = Color(0xFF6D4C41),
                             textAlign = TextAlign.Center
                         )
@@ -558,24 +549,24 @@ private fun FactionSelectionView(
                             text = faction.description,
                             fontSize = 10.sp,
                             color = BronzeDark,
-                            lineHeight = 13.sp,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.weight(1f)
+                            lineHeight = 13.5.sp,
+                            textAlign = TextAlign.Center
                         )
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         Surface(
                             color = AncientParchmentDark,
                             shape = RoundedCornerShape(6.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BronzeDark.copy(alpha = 0.3f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
                                 text = "⭐ ${faction.bonusDescription}",
-                                fontSize = 9.sp,
+                                fontSize = 9.5.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color(0xFF1B5E20),
                                 modifier = Modifier.padding(6.dp),
-                                lineHeight = 12.sp
+                                lineHeight = 12.5.sp
                             )
                         }
                     }

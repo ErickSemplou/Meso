@@ -1,5 +1,6 @@
 package com.example.ui.dialogs
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -30,7 +32,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,6 +43,7 @@ import com.example.model.DiplomaticStatus
 import com.example.model.Faction
 import com.example.model.FactionRelation
 import com.example.model.PlayerResources
+import com.example.ui.components.getRulerImageResource
 import com.example.ui.theme.AncientParchment
 import com.example.ui.theme.AncientParchmentLight
 import com.example.ui.theme.BronzeDark
@@ -54,7 +59,6 @@ fun DiplomacyDialog(
     onSendGift: (String) -> Unit,
     onProposePeace: (String) -> Unit,
     onProposeTrade: (String) -> Unit,
-    onDemandTribute: (String) -> Unit,
     onDeclareWar: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -67,11 +71,11 @@ fun DiplomacyDialog(
             border = androidx.compose.foundation.BorderStroke(2.dp, BronzeDark),
             shadowElevation = 16.dp,
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(0.95f)
                 .padding(6.dp)
                 .testTag("diplomacy_dialog")
         ) {
-            Column(modifier = Modifier.padding(14.dp)) {
+            Column(modifier = Modifier.padding(10.dp)) {
                 // Header
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -101,12 +105,17 @@ fun DiplomacyDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Укладайте мир, відкривайте торгові пакти (+20 🪙/хід) або відправляйте дари сусіднім державам.",
+                    fontSize = 10.sp,
+                    color = Color(0xFF5D4037),
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
 
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f, fill = false)
+                        .height(300.dp)
                 ) {
                     items(rivalFactions) { faction ->
                         val rel = relations[faction.id] ?: FactionRelation(faction.id)
@@ -127,34 +136,43 @@ fun DiplomacyDialog(
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
                         ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
+                            Column(modifier = Modifier.padding(8.dp)) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
+                                    // Ruler portrait avatar
                                     Box(
                                         modifier = Modifier
-                                            .size(14.dp)
+                                            .size(36.dp)
                                             .clip(CircleShape)
-                                            .background(faction.bannerColor)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                            .border(1.5.dp, faction.bannerColor, CircleShape)
+                                    ) {
+                                        Image(
+                                            painter = painterResource(id = getRulerImageResource(faction.id)),
+                                            contentDescription = faction.ruler,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "${faction.name} (${faction.ruler})",
+                                            text = "${faction.name} • ${faction.ruler}",
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp,
+                                            fontSize = 12.sp,
                                             color = BronzeDark
                                         )
                                         Text(
-                                            text = "Культ: ${faction.patronDeity}",
-                                            fontSize = 10.sp,
+                                            text = "Культ: ${faction.patronDeity} • Відносини: ${rel.relationshipScore}",
+                                            fontSize = 9.sp,
                                             color = Color(0xFF6D4C41)
                                         )
                                     }
 
                                     Surface(
-                                        color = statusColor.copy(alpha = 0.15f),
+                                        color = statusColor.copy(alpha = 0.2f),
                                         shape = RoundedCornerShape(4.dp),
                                         border = androidx.compose.foundation.BorderStroke(1.dp, statusColor)
                                     ) {
@@ -162,19 +180,11 @@ fun DiplomacyDialog(
                                             text = rel.status.label,
                                             color = statusColor,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 10.sp,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            fontSize = 9.sp,
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                         )
                                     }
                                 }
-
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = faction.description,
-                                    fontSize = 10.sp,
-                                    color = BronzeDark,
-                                    lineHeight = 13.sp
-                                )
 
                                 Spacer(modifier = Modifier.height(6.dp))
 
@@ -185,7 +195,7 @@ fun DiplomacyDialog(
                                 ) {
                                     Button(
                                         onClick = { onSendGift(faction.id) },
-                                        enabled = resources.silver >= 50,
+                                        enabled = resources.silver >= 40,
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = SumerianGold,
                                             contentColor = BronzeDark
@@ -193,7 +203,7 @@ fun DiplomacyDialog(
                                         shape = RoundedCornerShape(4.dp),
                                         modifier = Modifier.weight(1f)
                                     ) {
-                                        Text("Дари (50 🪙)", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                        Text("🎁 Дари (40🪙)", fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                     }
 
                                     if (rel.status == DiplomaticStatus.WAR || rel.status == DiplomaticStatus.HOSTILE) {
@@ -206,7 +216,7 @@ fun DiplomacyDialog(
                                             shape = RoundedCornerShape(4.dp),
                                             modifier = Modifier.weight(1f)
                                         ) {
-                                            Text("Мир", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                            Text("🤝 Мир", fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                         }
                                     } else {
                                         Button(
@@ -219,20 +229,12 @@ fun DiplomacyDialog(
                                             shape = RoundedCornerShape(4.dp),
                                             modifier = Modifier.weight(1f)
                                         ) {
-                                            Text("Торгівля", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                            Text(
+                                                text = if (rel.status == DiplomaticStatus.TRADE_PACT) "📜 Пакт діє" else "📜 Торг. пакт",
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
                                         }
-                                    }
-
-                                    Button(
-                                        onClick = { onDemandTribute(faction.id) },
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = BronzePrimary,
-                                            contentColor = Color.White
-                                        ),
-                                        shape = RoundedCornerShape(4.dp),
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text("Данина", fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                     }
 
                                     if (rel.status != DiplomaticStatus.WAR) {
@@ -245,7 +247,7 @@ fun DiplomacyDialog(
                                             shape = RoundedCornerShape(4.dp),
                                             modifier = Modifier.weight(1f)
                                         ) {
-                                            Text("Війна", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                            Text("⚔️ Війна", fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 }

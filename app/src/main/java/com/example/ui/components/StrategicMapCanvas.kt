@@ -164,55 +164,54 @@ fun StrategicMapCanvas(
             }
 
             // -- Euphrates & Tigris Dynamic Water Lines --
-            val tigris = Path().apply {
-                moveTo(widthPx * 0.48f, 0f)
-                cubicTo(
-                    widthPx * 0.52f, heightPx * 0.25f,
-                    widthPx * 0.65f, heightPx * 0.45f,
-                    widthPx * 0.74f, heightPx * 0.86f
-                )
-            }
-            // River bed & flow
-            drawPath(
-                tigris,
-                color = RiverEuphrates.copy(alpha = 0.85f),
-                style = Stroke(width = 8.5f, pathEffect = PathEffect.cornerPathEffect(20f))
-            )
-            drawPath(
-                tigris,
-                color = Color(0xFF80DEEA).copy(alpha = 0.5f),
-                style = Stroke(width = 3.5f, pathEffect = PathEffect.cornerPathEffect(20f))
-            )
-
             val euphrates = Path().apply {
-                moveTo(widthPx * 0.30f, 0f)
+                moveTo(widthPx * 0.15f, 0f)
                 cubicTo(
-                    widthPx * 0.38f, heightPx * 0.30f,
-                    widthPx * 0.45f, heightPx * 0.60f,
-                    widthPx * 0.68f, heightPx * 0.88f
+                    widthPx * 0.24f, heightPx * 0.26f, // Near Kish
+                    widthPx * 0.28f, heightPx * 0.56f, // Near Uruk
+                    widthPx * 0.52f, heightPx * 0.74f  // Near Ur & into Gulf
                 )
             }
             drawPath(
                 euphrates,
                 color = RiverEuphrates.copy(alpha = 0.9f),
-                style = Stroke(width = 10f, pathEffect = PathEffect.cornerPathEffect(20f))
+                style = Stroke(width = 9f, pathEffect = PathEffect.cornerPathEffect(20f))
             )
             drawPath(
                 euphrates,
                 color = Color(0xFF80DEEA).copy(alpha = 0.5f),
-                style = Stroke(width = 4f, pathEffect = PathEffect.cornerPathEffect(20f))
+                style = Stroke(width = 3.5f, pathEffect = PathEffect.cornerPathEffect(20f))
+            )
+
+            val tigris = Path().apply {
+                moveTo(widthPx * 0.45f, 0f)
+                cubicTo(
+                    widthPx * 0.55f, heightPx * 0.25f,
+                    widthPx * 0.68f, heightPx * 0.50f, // Near Lagash
+                    widthPx * 0.76f, heightPx * 0.90f
+                )
+            }
+            drawPath(
+                tigris,
+                color = RiverEuphrates.copy(alpha = 0.85f),
+                style = Stroke(width = 8f, pathEffect = PathEffect.cornerPathEffect(20f))
+            )
+            drawPath(
+                tigris,
+                color = Color(0xFF80DEEA).copy(alpha = 0.5f),
+                style = Stroke(width = 3f, pathEffect = PathEffect.cornerPathEffect(20f))
             )
 
             // -- Irrigation canals --
             val canal = Path().apply {
-                moveTo(widthPx * 0.42f, heightPx * 0.48f) // Nippur
-                lineTo(widthPx * 0.54f, heightPx * 0.52f) // Umma
-                lineTo(widthPx * 0.64f, heightPx * 0.58f) // Lagash
+                moveTo(widthPx * 0.42f, heightPx * 0.32f) // Nippur
+                lineTo(widthPx * 0.60f, heightPx * 0.34f) // Umma
+                lineTo(widthPx * 0.68f, heightPx * 0.52f) // Lagash
             }
             drawPath(
                 canal,
                 color = Color(0xFF00ACC1).copy(alpha = 0.8f),
-                style = Stroke(width = 4f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 8f), 0f))
+                style = Stroke(width = 3.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 6f), 0f))
             )
 
             // -- Selected City Tactical Aura --
@@ -221,14 +220,14 @@ fun StrategicMapCanvas(
                 val center = Offset(selectedCity.mapX * widthPx, selectedCity.mapY * heightPx)
                 drawCircle(
                     color = SumerianGoldBright.copy(alpha = 0.3f * pulseAnim.value),
-                    radius = 46f,
+                    radius = 42f,
                     center = center
                 )
                 drawCircle(
                     color = SumerianGold,
-                    radius = 42f,
+                    radius = 38f,
                     center = center,
-                    style = Stroke(width = 3.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f), 0f))
+                    style = Stroke(width = 3f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f), 0f))
                 )
             }
         }
@@ -236,7 +235,7 @@ fun StrategicMapCanvas(
         // 4. Geographic Landmark Labels
         Box(
             modifier = Modifier
-                .offset(x = (maxWidth * 0.82f) - 40.dp, y = (maxHeight * 0.15f))
+                .offset(x = (maxWidth * 0.82f) - 30.dp, y = (maxHeight * 0.12f))
                 .alpha(0.85f)
         ) {
             Text(
@@ -250,7 +249,7 @@ fun StrategicMapCanvas(
 
         Box(
             modifier = Modifier
-                .offset(x = (maxWidth * 0.06f), y = (maxHeight * 0.50f))
+                .offset(x = (maxWidth * 0.05f), y = (maxHeight * 0.48f))
                 .alpha(0.85f)
         ) {
             Text(
@@ -264,7 +263,7 @@ fun StrategicMapCanvas(
 
         Box(
             modifier = Modifier
-                .offset(x = (maxWidth * 0.72f), y = (maxHeight * 0.88f))
+                .offset(x = (maxWidth * 0.68f), y = (maxHeight * 0.88f))
                 .alpha(0.85f)
         ) {
             Text(
@@ -285,8 +284,8 @@ fun StrategicMapCanvas(
             Box(
                 modifier = Modifier
                     .offset(
-                        x = (city.mapX * maxWidth.value).dp - 50.dp,
-                        y = (city.mapY * maxHeight.value).dp - 44.dp
+                        x = (city.mapX * maxWidth.value).dp - 42.dp,
+                        y = (city.mapY * maxHeight.value).dp - 36.dp
                     )
                     .clickable { onCitySelected(city.id) }
                     .testTag("city_${city.id}")
@@ -311,7 +310,7 @@ private fun TotalWarSettlementModel(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(105.dp)
+        modifier = Modifier.width(84.dp)
     ) {
         // Upper: 3D Miniature Fortress / Ziggurat Model + Fluttering Banner
         Row(

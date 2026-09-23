@@ -13,7 +13,6 @@ import com.example.model.FactionRelation
 import com.example.model.GameEvent
 import com.example.model.GameState
 import com.example.model.PlayerResources
-import com.example.model.QuizQuestion
 import com.example.model.ResourceCost
 import com.example.model.Technology
 import com.example.model.UnitType
@@ -166,11 +165,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun sendDiplomaticGift(targetFactionId: String): Boolean {
         val current = _gameState.value
-        val cost = ResourceCost(silver = 50)
+        val cost = ResourceCost(silver = 40)
         if (!current.resources.canAfford(cost)) return false
 
         val rel = current.relations[targetFactionId] ?: FactionRelation(targetFactionId)
-        val newScore = (rel.relationshipScore + 25).coerceAtMost(100)
+        val newScore = (rel.relationshipScore + 30).coerceAtMost(100)
         val updatedRelations = current.relations.toMutableMap()
         updatedRelations[targetFactionId] = rel.copy(relationshipScore = newScore)
 
@@ -380,6 +379,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 deltaPiety += b.pietyBonus
                 additionalStorage += b.maxGrainStorageBonus
             }
+            // City Unique Starter Traits
+            deltaGrain += city.bonusGrain
+            deltaClay += city.bonusClay
+            deltaBronze += city.bonusBronze
+            deltaSilver += city.bonusSilver
         }
 
         // Faction bonus calculations
@@ -398,6 +402,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
         if (current.researchedTechIds.contains("cuneiform")) {
             deltaSilver = (deltaSilver * 1.15).toInt()
+        }
+
+        // Diplomatic Trade Pacts (+20 silver per treaty)
+        current.relations.values.filter { it.status == DiplomaticStatus.TRADE_PACT }.forEach {
+            deltaSilver += 20
         }
 
         // Upkeep consumption: armies consume grain
@@ -455,10 +464,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             maxGrainStorage = maxCap
         )
 
-        // 5. Select 6th-grade Educational Quiz question
-        val nextQuiz = QuizQuestion.getRandomQuestion(current.completedQuizIds)
-
-        // 6. Check for historical events (every 2-3 turns)
+        // 5. Check for historical events (every 2-3 turns)
         val nextEvent = if (current.turn % 2 == 0 && Random.nextBoolean()) {
             GameEvent.ALL_EVENTS.random()
         } else null
@@ -492,7 +498,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             researchedTechIds = updatedResearchedTechs,
             currentTechId = updatedCurrentTech,
             currentTechTurnsRemaining = updatedTechTurns,
-            pendingQuiz = if (!isGameOver) nextQuiz else null,
             activeEvent = if (!isGameOver) nextEvent else null,
             isVictory = isCampaignVictorious,
             isDefeat = isTotalDefeat,
@@ -508,53 +513,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun restartCampaign() {
         val factionId = _gameState.value.playerFactionId
         startNewCampaign(factionId)
-    }
-
-    fun answerQuiz(selectedOptionIndex: Int): QuizResult {
-        val current = _gameState.value
-        val quiz = current.pendingQuiz ?: return QuizResult(false, "", "")
-        val isCorrect = (selectedOptionIndex == quiz.correctIndex)
-
-        var newRes = current.resources
-        val rewardMsg: String
-        if (isCorrect) {
-            newRes = newRes.add(
-                PlayerResources(
-                    grain = quiz.rewardGrain,
-                    clay = quiz.rewardClay,
-                    bronze = quiz.rewardBronze,
-                    silver = quiz.rewardSilver,
-                    loyalty = quiz.rewardLoyalty
-                )
-            )
-            rewardMsg = "Чудово! Правильна відповідь. Нагорода: ${quiz.rewardSummary}"
-        } else {
-            rewardMsg = "Правильна відповідь: «${quiz.options[quiz.correctIndex]}». Вивчай історію з користю!"
-        }
-
-        val updatedCompletedQuizzes = current.completedQuizIds + quiz.id
-        val updatedCorrectCount = if (isCorrect) current.correctQuizCount + 1 else current.correctQuizCount
-
-        val nextState = current.copy(
-            resources = newRes,
-            pendingQuiz = null, // dismissed
-            completedQuizIds = updatedCompletedQuizzes,
-            correctQuizCount = updatedCorrectCount,
-            chronicleLog = current.chronicleLog + "Історична вікторина: ${if (isCorrect) "Правильно!" else "Помилка."} $rewardMsg"
-        )
-        _gameState.value = nextState
-        repository.saveGame(nextState)
-
-        return QuizResult(
-            isCorrect = isCorrect,
-            explanation = quiz.explanation,
-            rewardText = rewardMsg
-        )
-    }
-
-    fun dismissQuiz() {
-        val current = _gameState.value
-        _gameState.value = current.copy(pendingQuiz = null)
     }
 
     fun resolveEventOption(optionIndex: Int) {
@@ -585,12 +543,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _gameState.value = current.copy(activeEvent = null)
     }
 }
-
-data class QuizResult(
-    val isCorrect: Boolean,
-    val explanation: String,
-    val rewardText: String
-)
 
 data class BattleResult(
     val title: String,

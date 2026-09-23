@@ -1,5 +1,7 @@
 package com.example.ui.dialogs
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +28,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.ui.components.UnitAvatar
+import com.example.ui.theme.AncientParchmentDark
 import com.example.ui.theme.AncientParchmentLight
 import com.example.ui.theme.BronzeDark
 import com.example.ui.theme.SumerianGold
@@ -47,12 +51,12 @@ fun BattleResultDialog(
             ),
             shadowElevation = 16.dp,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
+                .fillMaxWidth(0.95f)
+                .padding(10.dp)
                 .testTag("battle_result_dialog")
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Icon(
@@ -62,7 +66,7 @@ fun BattleResultDialog(
                     modifier = Modifier.size(36.dp)
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
                     text = result.title,
@@ -74,15 +78,35 @@ fun BattleResultDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
+                // Battle Units Avatar Display
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(AncientParchmentDark, RoundedCornerShape(8.dp))
+                        .padding(8.dp)
+                ) {
+                    UnitAvatar(unitId = "phalanx", size = 32.dp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    UnitAvatar(unitId = "spearmen", size = 32.dp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    UnitAvatar(unitId = "chariot", size = 32.dp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    UnitAvatar(unitId = "archers", size = 32.dp)
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
                 Text(
                     text = result.details,
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     color = BronzeDark,
-                    lineHeight = 18.sp,
+                    lineHeight = 17.sp,
                     textAlign = TextAlign.Start
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 Button(
                     onClick = onDismiss,

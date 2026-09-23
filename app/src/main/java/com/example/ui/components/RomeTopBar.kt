@@ -2,14 +2,12 @@ package com.example.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,7 +18,6 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.HistoryEdu
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.MusicOff
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -53,7 +50,7 @@ fun RomeTopBar(
 ) {
     Surface(
         color = AncientParchmentDark,
-        shadowElevation = 6.dp,
+        shadowElevation = 4.dp,
         border = androidx.compose.foundation.BorderStroke(1.5.dp, BronzeDark),
         modifier = modifier.fillMaxWidth()
     ) {
@@ -61,7 +58,7 @@ fun RomeTopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
-                .padding(horizontal = 10.dp, vertical = 4.dp)
+                .padding(horizontal = 8.dp, vertical = 4.dp)
                 .fillMaxWidth()
         ) {
             // Left: Faction Banner & Leader
@@ -114,36 +111,45 @@ fun RomeTopBar(
                 }
             }
 
-            // Center: Strategic Resources
+            // Center: Strategic Resources with Dynamic Income/Turn indicators
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val grainDelta = state.netIncomeGrain
                 ResourcePill(
                     label = "Зерно",
-                    value = "${state.resources.grain}/${state.resources.maxGrainStorage}",
+                    value = "${state.resources.grain}",
+                    delta = if (grainDelta >= 0) "+$grainDelta" else "$grainDelta",
                     emoji = "🌾",
                     textColor = if (state.resources.grain < 30) TerracottaRed else BronzeDark
                 )
+                val clayDelta = state.netIncomeClay
                 ResourcePill(
                     label = "Глина",
                     value = "${state.resources.clay}",
+                    delta = "+$clayDelta",
                     emoji = "🧱"
                 )
+                val bronzeDelta = state.netIncomeBronze
                 ResourcePill(
                     label = "Бронза",
                     value = "${state.resources.bronze}",
+                    delta = "+$bronzeDelta",
                     emoji = "🛡"
                 )
+                val silverDelta = state.netIncomeSilver
                 ResourcePill(
                     label = "Срібло",
                     value = "${state.resources.silver}",
+                    delta = "+$silverDelta",
                     emoji = "🪙",
                     textColor = SumerianGold
                 )
                 ResourcePill(
                     label = "Лояльність",
                     value = "${state.resources.loyalty}%",
+                    delta = null,
                     emoji = "🕊",
                     textColor = if (state.resources.loyalty < 50) TerracottaRed else Color(0xFF2E7D32)
                 )
@@ -154,42 +160,42 @@ fun RomeTopBar(
                 IconButton(
                     onClick = onToggleMusic,
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(34.dp)
                         .testTag("toggle_music_button")
                 ) {
                     Icon(
                         imageVector = if (isMusicMuted) Icons.Default.MusicOff else Icons.Default.MusicNote,
                         contentDescription = if (isMusicMuted) "Увімкнути музику" else "Вимкнути музику",
                         tint = if (isMusicMuted) Color.Gray else BronzePrimary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(19.dp)
                     )
                 }
 
                 IconButton(
                     onClick = onOpenCodex,
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(34.dp)
                         .testTag("open_codex_button")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.MenuBook,
                         contentDescription = "Енциклопедія Месопотамії",
                         tint = BronzePrimary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(19.dp)
                     )
                 }
 
                 IconButton(
                     onClick = onOpenChronicle,
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(34.dp)
                         .testTag("open_chronicle_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.HistoryEdu,
                         contentDescription = "Царський літопис",
                         tint = BronzePrimary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(19.dp)
                     )
                 }
             }
@@ -201,12 +207,13 @@ fun RomeTopBar(
 fun ResourcePill(
     label: String,
     value: String,
+    delta: String?,
     emoji: String,
     textColor: Color = BronzeDark
 ) {
     Surface(
         color = AncientParchmentLight,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(8.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, BronzeDark.copy(alpha = 0.35f))
     ) {
         Row(
@@ -221,6 +228,16 @@ fun ResourcePill(
                 fontWeight = FontWeight.Bold,
                 color = textColor
             )
+            if (delta != null) {
+                Spacer(modifier = Modifier.width(2.dp))
+                val isNegative = delta.startsWith("-")
+                Text(
+                    text = "($delta)",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isNegative) TerracottaRed else Color(0xFF2E7D32)
+                )
+            }
         }
     }
 }

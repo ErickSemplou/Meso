@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -44,6 +45,8 @@ import com.example.R
 import com.example.model.Building
 import com.example.model.City
 import com.example.model.PlayerResources
+import com.example.ui.components.BuildingAvatar
+import com.example.ui.components.UnitAvatar
 import com.example.ui.theme.AncientParchment
 import com.example.ui.theme.AncientParchmentDark
 import com.example.ui.theme.AncientParchmentLight
@@ -132,6 +135,73 @@ fun CityManageDialog(
                     }
                 }
 
+                // City Unique Trait Box
+                Surface(
+                    color = SumerianGold.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(6.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, SumerianGold),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(6.dp)
+                    ) {
+                        Text(text = "👑", fontSize = 16.sp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Column {
+                            Text(
+                                text = "Унікальна властивість: ${city.uniqueTrait}",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BronzeDark
+                            )
+                            Text(
+                                text = city.traitDescription,
+                                fontSize = 9.sp,
+                                color = Color(0xFF5D4037)
+                            )
+                        }
+                    }
+                }
+
+                // Garrison Troop Avatars Row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(AncientParchmentDark, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Гарнізон міста: ",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BronzeDark
+                    )
+                    city.garrison.forEach { (unitId, count) ->
+                        if (count > 0) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .background(AncientParchmentLight, RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                            ) {
+                                UnitAvatar(unitId = unitId, size = 18.dp)
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "x$count",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BronzeDark
+                                )
+                            }
+                        }
+                    }
+                }
+
                 if (city.buildingInProgress != null) {
                     val inProgress = Building.getById(city.buildingInProgress)
                     Surface(
@@ -140,41 +210,29 @@ fun CityManageDialog(
                         border = androidx.compose.foundation.BorderStroke(1.dp, SumerianGold),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp)
+                            .padding(vertical = 3.dp)
                     ) {
                         Text(
                             text = "⏳ Зараз тривають будівельні роботи: ${inProgress.name} (Залишилося: ${city.buildingTurnsRemaining} хід)",
-                            fontSize = 10.sp,
+                            fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             color = BronzeDark,
-                            modifier = Modifier.padding(6.dp)
+                            modifier = Modifier.padding(4.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(280.dp)
+                        .height(230.dp)
                 ) {
                     items(Building.ALL_BUILDINGS) { building ->
                         val isBuilt = city.hasBuilding(building.id)
                         val isBuilding = city.buildingInProgress == building.id
                         val canAfford = resources.canAfford(building.cost)
-
-                        val buildingEmoji = when (building.id) {
-                            "canals" -> "🌊"
-                            "granary" -> "🌾"
-                            "walls" -> "🧱"
-                            "ziggurat" -> "🏛️"
-                            "edubba" -> "📜"
-                            "bronze_foundry" -> "⚒️"
-                            "harbor" -> "⛵"
-                            "temple_inanna" -> "⭐"
-                            else -> "🏛️"
-                        }
 
                         Surface(
                             color = if (isBuilt) AncientParchmentDark.copy(alpha = 0.5f) else AncientParchment,
@@ -197,8 +255,11 @@ fun CityManageDialog(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.weight(1f)
                                     ) {
-                                        Text(text = buildingEmoji, fontSize = 20.sp)
-                                        Spacer(modifier = Modifier.width(6.dp))
+                                        BuildingAvatar(
+                                            buildingId = building.id,
+                                            size = 36.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
                                         Column {
                                             Text(
                                                 text = building.name,
