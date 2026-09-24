@@ -64,6 +64,7 @@ fun RomeCommandBar(
     onOpenDecreesDialog: () -> Unit = {},
     onAttackCity: () -> Unit,
     onEndTurn: () -> Unit,
+    onArmyUnitTapped: (factionId: String, unitTypeId: String, cityName: String, regimentCount: Int) -> Unit = { _, _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val isPlayerOwned = selectedCity?.factionId == playerFactionId
@@ -148,7 +149,11 @@ fun RomeCommandBar(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier
                                             .background(AncientParchmentDark, RoundedCornerShape(4.dp))
-                                            .padding(horizontal = 2.dp, vertical = 1.dp)
+                                            .border(1.dp, SumerianGold.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                                            .clickable {
+                                                onArmyUnitTapped(selectedCity.factionId, unitId, selectedCity.name, count)
+                                            }
+                                            .padding(horizontal = 3.dp, vertical = 1.dp)
                                     ) {
                                         UnitAvatar(unitId = unitId, size = 16.dp)
                                         Spacer(modifier = Modifier.width(1.dp))

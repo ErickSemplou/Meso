@@ -25,7 +25,9 @@ data class GameState(
     val showMegaProjects: Boolean = false,
     val lastHarvestDeltas: List<Int>? = null,
     val botCampaignSourceCityId: String? = null,
-    val botCampaignTargetCityId: String? = null
+    val botCampaignTargetCityId: String? = null,
+    val activeQuizQuestion: HistoryQuizQuestion? = null,
+    val answeredQuizzesCount: Int = 0
 ) {
     val playerFaction: Faction
         get() = Faction.getById(playerFactionId)

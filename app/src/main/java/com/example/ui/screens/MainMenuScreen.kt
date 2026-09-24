@@ -485,7 +485,7 @@ private fun FactionSelectionView(
 
         // Faction Selection Carousel
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -493,22 +493,22 @@ private fun FactionSelectionView(
             items(Faction.ALL_PLAYABLE) { faction ->
                 val isSelected = faction.id == selectedFaction.id
                 Surface(
-                    color = if (isSelected) SumerianGold.copy(alpha = 0.22f) else AncientParchmentLight,
-                    shape = RoundedCornerShape(12.dp),
+                    color = if (isSelected) Color(0xFFFFFDF7) else Color(0xFFF7F1E5),
+                    shape = RoundedCornerShape(14.dp),
                     border = androidx.compose.foundation.BorderStroke(
                         if (isSelected) 3.dp else 1.5.dp,
                         if (isSelected) SumerianGold else BronzeDark
                     ),
-                    shadowElevation = if (isSelected) 10.dp else 2.dp,
+                    shadowElevation = if (isSelected) 12.dp else 3.dp,
                     modifier = Modifier
-                        .width(260.dp)
+                        .width(280.dp)
                         .clickable { onSelectFaction(faction) }
                         .testTag("faction_card_${faction.id}")
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(8.dp)
+                            .padding(10.dp)
                             .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
@@ -516,57 +516,79 @@ private fun FactionSelectionView(
                         RulerPortraitCard(
                             faction = faction,
                             isSelected = isSelected,
-                            imageHeight = 135.dp,
+                            imageHeight = 140.dp,
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
                             text = faction.name,
-                            fontSize = 17.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Black,
                             color = BronzeDark
                         )
                         Text(
                             text = faction.title,
-                            fontSize = 11.sp,
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = BronzePrimary
                         )
 
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Покровитель: ${faction.patronDeity}",
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF6D4C41),
-                            textAlign = TextAlign.Center
-                        )
-
                         Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = faction.description,
-                            fontSize = 10.sp,
-                            color = BronzeDark,
-                            lineHeight = 13.5.sp,
-                            textAlign = TextAlign.Center
-                        )
+
+                        // Patron Deity Badge
+                        Surface(
+                            color = Color(0xFFEDE0CC),
+                            shape = RoundedCornerShape(6.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, SumerianGold.copy(alpha = 0.5f))
+                        ) {
+                            Text(
+                                text = "🏛️ Покровитель: ${faction.patronDeity}",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF3E2723),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                textAlign = TextAlign.Center
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(8.dp))
+
+                        // Opaque High-Contrast Historical Description Box
                         Surface(
-                            color = AncientParchmentDark,
-                            shape = RoundedCornerShape(6.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BronzeDark.copy(alpha = 0.3f)),
+                            color = Color(0xFFEDE4D3),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BronzeDark.copy(alpha = 0.35f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = "⭐ ${faction.bonusDescription}",
-                                fontSize = 9.5.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF1B5E20),
-                                modifier = Modifier.padding(6.dp),
-                                lineHeight = 12.5.sp
+                                text = faction.description,
+                                fontSize = 11.sp,
+                                color = Color(0xFF1B1108),
+                                lineHeight = 15.sp,
+                                fontWeight = FontWeight.Normal,
+                                textAlign = TextAlign.Start,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Opaque High-Contrast Faction Bonus Box
+                        Surface(
+                            color = Color(0xFFE8F5E9),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2E7D32)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "⭐ Особливість: ${faction.bonusDescription}",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF0A3D14),
+                                modifier = Modifier.padding(8.dp),
+                                lineHeight = 14.sp
                             )
                         }
                     }

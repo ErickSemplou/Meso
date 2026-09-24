@@ -14,9 +14,10 @@ import kotlin.math.exp
 import kotlin.math.sin
 
 /**
- * Procedural ancient Sumerian Lyre & Flute synthesizer using native AudioTrack.
- * Generates an authentic, soothing ancient Mesopotamian pentatonic melody
- * inspired by the Hurrian Hymn to Nikkal and the Royal Lyre of Ur.
+ * Atmospheric Ancient Mesopotamian Ambient Soundscape.
+ * Generates an ultra-soft, meditative acoustic lyre & warm temple flute ambiance.
+ * Designed with gentle, slow pacing, generous natural acoustic decay, soft volume,
+ * and calming pauses between phrases to ensure non-intrusive, deeply relaxing background presence.
  */
 class MesopotamianLyrePlayer {
 
@@ -29,29 +30,26 @@ class MesopotamianLyrePlayer {
 
     private val sampleRate = 22050
 
-    // Ancient Mesopotamian pentatonic / diatonic scale (in Hz)
-    // Based on the Silver Lyre of Ur (D minor pentatonic / Dorian tone mode)
-    private val scale = doubleArrayOf(
-        146.83, // D3 (Bass drone)
+    // Calming ancient pentatonic harmony frequencies (Warm D/A modal)
+    // Low, soothing acoustic harp tones
+    private val soothingNotes = doubleArrayOf(
+        146.83, // D3 (Deep warm bass)
+        196.00, // G3
         220.00, // A3
         261.63, // C4
         293.66, // D4
         329.63, // E4
-        349.23, // F4
         392.00, // G4
-        440.00, // A4
-        523.25, // C5
-        587.33  // D5
+        440.00  // A4
     )
 
-    // A meditative ancient melodic motif pattern (indices in the scale array)
-    private val melodyPattern = intArrayOf(
-        0, 3, 5, 6, 7, 6, 5, 3,
-        1, 4, 6, 7, 8, 7, 6, 4,
-        0, 5, 7, 8, 9, 8, 7, 5,
-        3, 6, 7, 6, 5, 4, 3, 1,
-        0, 3, 7, 9, 7, 5, 3, 0,
-        1, 4, 6, 7, 5, 4, 3, 1
+    // Gentle, sparse contemplative melody sequence
+    private val serenePhrases: List<List<Int>> = listOf(
+        listOf(0, 2, 4, 3),          // Warm opening chord arpeggio
+        listOf(1, 4, 5, 4),          // River flow motif
+        listOf(0, 3, 4, 6),          // Distant temple bells
+        listOf(2, 4, 5, 2),          // Golden sunset melody
+        listOf(0, 1, 3, 0)           // Grounding resolution
     )
 
     fun start() {
@@ -85,60 +83,78 @@ class MesopotamianLyrePlayer {
             audioTrack?.play()
 
             playbackJob = scope.launch {
-                var step = 0
+                var phraseIdx = 0
                 while (isActive) {
                     if (isMuted) {
-                        delay(200)
+                        delay(500)
                         continue
                     }
 
-                    val noteIdx = melodyPattern[step % melodyPattern.size]
-                    val freq = scale[noteIdx]
-                    val isDrone = (step % 8 == 0)
-                    val durationMs = if (isDrone) 1200 else 600
+                    val phrase = serenePhrases[phraseIdx % serenePhrases.size]
 
-                    val audioData = generatePluckedNote(freq, durationMs, isDrone)
-                    audioTrack?.write(audioData, 0, audioData.size)
+                    // Play gentle slow arpeggio
+                    for (noteKey in phrase) {
+                        if (isMuted || !isActive) break
 
-                    step++
-                    // Gentle pause between phrases for contemplative mood
-                    val pause = if (step % 8 == 0) 350L else 120L
-                    delay(pause)
+                        val freq = soothingNotes[noteKey.coerceIn(0, soothingNotes.size - 1)]
+                        val isDeepBass = noteKey <= 1
+                        val durationMs = if (isDeepBass) 1800 else 1400
+
+                        val audio = synthesizeSereneAcousticTone(
+                            freq = freq,
+                            durationMs = durationMs,
+                            isBass = isDeepBass
+                        )
+                        audioTrack?.write(audio, 0, audio.size)
+
+                        // Gentle, breathing spacing between individual plucked strings (800ms)
+                        delay(750L)
+                    }
+
+                    phraseIdx++
+
+                    // Generous, calming silence pause of 3.5 to 5 seconds between musical phrases
+                    // Allows the player to focus peacefully without auditory fatigue!
+                    delay(3800L)
                 }
             }
         } catch (_: Exception) {
-            // Graceful fallback if audio device is occupied or unavailable
+            // Gracefully ignore if audio device is unavailable
         }
     }
 
-    private fun generatePluckedNote(freq: Double, durationMs: Int, addDrone: Boolean): ShortArray {
+    /**
+     * Synthesizes a warm, soft acoustic gut-string pluck with delicate wooden resonance.
+     * Keeps high-frequency harmonics dampened to prevent harshness or ear fatigue.
+     */
+    private fun synthesizeSereneAcousticTone(freq: Double, durationMs: Int, isBass: Boolean): ShortArray {
         val totalSamples = (sampleRate * (durationMs / 1000.0)).toInt()
         val buffer = ShortArray(totalSamples)
 
-        val decayRate = 3.2
-        val droneFreq = 146.83 // Low D drone
+        // Soft, smooth decay
+        val decayRate = if (isBass) 1.5 else 2.2
+        val volumeGain = if (isBass) 0.14 else 0.11 // Low, mellow, pleasant volume
 
         for (i in 0 until totalSamples) {
             val t = i.toDouble() / sampleRate
-            // Plucked string envelope: fast rise, gentle exponential decay
+
+            // Gentle exponential decay curve
             val envelope = exp(-decayRate * t)
 
-            // Primary harmonic + warm subtle 2nd and 3rd harmonics of lyre
-            val wave1 = sin(2.0 * PI * freq * t)
-            val wave2 = 0.4 * sin(4.0 * PI * freq * t)
-            val wave3 = 0.2 * sin(6.0 * PI * freq * t)
+            // Warm fundamental tone + soft octaves (no sharp buzzing harmonics)
+            val fundamental = sin(2.0 * PI * freq * t)
+            val warmOctave = 0.22 * sin(4.0 * PI * freq * t) * exp(-decayRate * 1.5 * t)
+            val subtleThird = 0.08 * sin(6.0 * PI * freq * t) * exp(-decayRate * 2.5 * t)
 
-            var sample = (wave1 + wave2 + wave3) * envelope * 0.28
+            // Very subtle gentle wooden flute drone in bass notes
+            val fluteDrone = if (isBass) {
+                0.06 * sin(2.0 * PI * (freq * 0.5) * t)
+            } else 0.0
 
-            if (addDrone) {
-                val droneEnv = exp(-1.8 * t)
-                val droneWave = sin(2.0 * PI * droneFreq * t) * droneEnv * 0.18
-                sample += droneWave
-            }
+            val combined = (fundamental + warmOctave + subtleThird + fluteDrone) * envelope * volumeGain
 
-            // Convert to 16-bit PCM
-            val pcm = (sample * 32767.0).coerceIn(-32767.0, 32767.0).toInt().toShort()
-            buffer[i] = pcm
+            // Soft-clipping into 16-bit PCM
+            buffer[i] = (combined * 32767.0).coerceIn(-32767.0, 32767.0).toInt().toShort()
         }
 
         return buffer
@@ -150,8 +166,7 @@ class MesopotamianLyrePlayer {
         try {
             audioTrack?.stop()
             audioTrack?.release()
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) {}
         audioTrack = null
     }
 }

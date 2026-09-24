@@ -5,6 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.audio.MesopotamianLyrePlayer
 import com.example.data.GameRepository
+import com.example.data.UnitRepository
+import com.example.data.local.AppDatabase
+import com.example.data.local.UnitEntity
 import com.example.engine.TurnLogEngine
 import com.example.model.Building
 import com.example.model.City
@@ -13,6 +16,7 @@ import com.example.model.Faction
 import com.example.model.FactionRelation
 import com.example.model.GameEvent
 import com.example.model.GameState
+import com.example.model.HistoryQuizQuestion
 import com.example.model.PlayerResources
 import com.example.model.ResourceCost
 import com.example.model.Technology
@@ -20,12 +24,23 @@ import com.example.model.UnitType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.random.Random
+
+data class UnitModalState(
+    val unit: UnitEntity,
+    val faction: Faction,
+    val cityName: String? = null,
+    val regimentCount: Int = 1,
+    val availableFactionUnits: List<UnitEntity> = emptyList()
+)
 
 class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = GameRepository(application)
+    private val unitDatabase = AppDatabase.getDatabase(application)
+    val unitRepository = UnitRepository(unitDatabase.unitDao())
     val lyrePlayer = MesopotamianLyrePlayer()
 
     private val _gameState = MutableStateFlow(GameState.createInitial("uruk"))
@@ -46,8 +61,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _battleResultDialog = MutableStateFlow<BattleResult?>(null)
     val battleResultDialog: StateFlow<BattleResult?> = _battleResultDialog.asStateFlow()
 
+    // Room Persistent Unit Modal State
+    private val _unitModalState = MutableStateFlow<UnitModalState?>(null)
+    val unitModalState: StateFlow<UnitModalState?> = _unitModalState.asStateFlow()
+
     init {
         lyrePlayer.start()
+        viewModelScope.launch {
+            unitRepository.seedInitialUnitsIfEmpty()
+        }
     }
 
     override fun onCleared() {
@@ -486,11 +508,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val finalCitiesWithBotUpdates = botResult.updatedCities
         val newTurnLogs = botResult.logs
 
-        // 6. Check for historical events (every 2-3 turns)
-        val nextEvent = if (current.turn % 2 == 0 && Random.nextBoolean()) {
-            GameEvent.ALL_EVENTS.random()
-        } else null
-
         val nextTurn = current.turn + 1
         val nextYearBCE = current.yearBCE - 5
 
@@ -510,6 +527,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             else -> null
         }
 
+        // 6. Random historical event on every new turn (50 distinct events pool)
+        val eventIndex = ((nextTurn - 2).coerceAtLeast(0)) % GameEvent.ALL_50_EVENTS.size
+        val nextEvent = if (!isGameOver) GameEvent.ALL_50_EVENTS[eventIndex] else null
+
+        // 7. Educational test question for 6th grade history every 2nd new turn (25 tests total)
+        val nextQuiz = if (!isGameOver && (nextTurn % 2 == 0)) {
+            val quizIdx = ((nextTurn / 2) - 1).coerceIn(0, HistoryQuizQuestion.ALL_25_TESTS.size - 1)
+            HistoryQuizQuestion.ALL_25_TESTS[quizIdx]
+        } else null
+
         val logEntry = "$nextYearBCE р. до н.е. (Хід $nextTurn/${current.maxTurns}): Завершено сезонні роботи. Урожай: +$deltaGrain зерна, витрати війська: -$armyFoodUpkeep зерна."
 
         val nextState = current.copy(
@@ -521,19 +548,46 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             researchedTechIds = updatedResearchedTechs,
             currentTechId = updatedCurrentTech,
             currentTechTurnsRemaining = updatedTechTurns,
-            activeEvent = if (!isGameOver) nextEvent else null,
+            activeEvent = nextEvent,
+            activeQuizQuestion = nextQuiz,
             isVictory = isCampaignVictorious,
             isDefeat = isTotalDefeat,
             isGameOver = isGameOver,
             gameOverReason = gameOverReason,
             chronicleLog = current.chronicleLog + logEntry,
             lastTurnLogs = newTurnLogs,
-            showTurnLogOverlay = !isGameOver,
+            showTurnLogOverlay = false, // Disabled auto-overlay so it does not obstruct the map
             lastHarvestDeltas = listOf(deltaGrain, deltaClay, deltaBronze, deltaSilver),
             botCampaignSourceCityId = botResult.campaignSourceCityId,
             botCampaignTargetCityId = botResult.campaignTargetCityId
         )
 
+        _gameState.value = nextState
+        repository.saveGame(nextState)
+    }
+
+    fun resolveHistoryQuiz(isCorrect: Boolean, question: HistoryQuizQuestion) {
+        val current = _gameState.value
+        val res = current.resources
+        val (updatedRes, log) = if (isCorrect) {
+            val updated = res.copy(
+                grain = res.grain + question.rewardGrain,
+                clay = res.clay + question.rewardClay,
+                bronze = res.bronze + question.rewardBronze,
+                silver = res.silver + question.rewardSilver,
+                piety = (res.piety + 15).coerceIn(0, 100)
+            )
+            Pair(updated, "✓ Історичний тест успішно пройдено! Нагорода: ${question.rewardText}")
+        } else {
+            Pair(res, "💡 Історичний тест: знання поповнено. Правильна відповідь: ${question.options[question.correctIndex]}.")
+        }
+
+        val nextState = current.copy(
+            resources = updatedRes,
+            activeQuizQuestion = null,
+            answeredQuizzesCount = current.answeredQuizzesCount + 1,
+            chronicleLog = current.chronicleLog + log
+        )
         _gameState.value = nextState
         repository.saveGame(nextState)
     }
@@ -651,6 +705,45 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun dismissEvent() {
         val current = _gameState.value
         _gameState.value = current.copy(activeEvent = null)
+    }
+
+    fun openArmyUnitDetails(
+        factionId: String,
+        unitTypeId: String,
+        cityName: String? = null,
+        regimentCount: Int = 1
+    ) {
+        viewModelScope.launch {
+            unitRepository.seedInitialUnitsIfEmpty()
+            val unit = unitRepository.getUnitByFactionAndType(factionId, unitTypeId)
+                ?: unitRepository.getUnitById("${factionId}_$unitTypeId")
+                ?: unitRepository.getUnitById("uruk_$unitTypeId")
+            val faction = Faction.getById(factionId)
+            val factionUnits = try {
+                unitRepository.getUnitsForFaction(factionId).first()
+            } catch (e: Exception) {
+                emptyList()
+            }
+
+            if (unit != null) {
+                _unitModalState.value = UnitModalState(
+                    unit = unit,
+                    faction = faction,
+                    cityName = cityName,
+                    regimentCount = regimentCount,
+                    availableFactionUnits = factionUnits
+                )
+            }
+        }
+    }
+
+    fun selectUnitInModal(unit: UnitEntity) {
+        val current = _unitModalState.value ?: return
+        _unitModalState.value = current.copy(unit = unit)
+    }
+
+    fun dismissUnitModal() {
+        _unitModalState.value = null
     }
 }
 

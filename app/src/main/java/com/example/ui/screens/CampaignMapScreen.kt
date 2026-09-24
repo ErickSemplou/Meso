@@ -32,7 +32,6 @@ import com.example.ui.components.RomeCommandBar
 import com.example.ui.components.RomeTopBar
 import com.example.ui.components.StrategicMapCanvas
 import com.example.ui.components.TurnLogOverlay
-import com.example.ui.components.TurnTrackerCard
 import com.example.ui.dialogs.BattleResultDialog
 import com.example.ui.dialogs.CampaignGameOverDialog
 import com.example.ui.dialogs.ChronicleDialog
@@ -41,9 +40,11 @@ import com.example.ui.dialogs.CodexDialog
 import com.example.ui.dialogs.DiplomacyDialog
 import com.example.ui.dialogs.EventDialog
 import com.example.ui.dialogs.FactionsOverviewDialog
+import com.example.ui.dialogs.HistoryQuizDialog
 import com.example.ui.dialogs.MegaProjectsDialog
 import com.example.ui.dialogs.RecruitmentDialog
 import com.example.ui.dialogs.TechTreeDialog
+import com.example.ui.dialogs.UnitStatsModalDialog
 import com.example.ui.theme.AncientParchment
 import com.example.ui.theme.AncientParchmentLight
 import com.example.ui.theme.BronzeDark
@@ -60,6 +61,7 @@ fun CampaignMapScreen(
     val selectedCityId by viewModel.selectedCityId.collectAsState()
     val isMusicMuted by viewModel.isMusicMuted.collectAsState()
     val battleResult by viewModel.battleResultDialog.collectAsState()
+    val unitModalState by viewModel.unitModalState.collectAsState()
 
     val selectedCity = state.cities.find { it.id == selectedCityId }
 
@@ -100,7 +102,10 @@ fun CampaignMapScreen(
                 onAttackCity = {
                     selectedCityId?.let { viewModel.launchMilitaryCampaign(it) }
                 },
-                onEndTurn = { viewModel.endTurn() }
+                onEndTurn = { viewModel.endTurn() },
+                onArmyUnitTapped = { factionId, unitTypeId, cityName, count ->
+                    viewModel.openArmyUnitDetails(factionId, unitTypeId, cityName, count)
+                }
             )
         },
         modifier = modifier
@@ -122,7 +127,10 @@ fun CampaignMapScreen(
                 onCitySelected = { viewModel.selectCity(it) },
                 botCampaignSourceCityId = state.botCampaignSourceCityId,
                 botCampaignTargetCityId = state.botCampaignTargetCityId,
-                filteredFactionId = selectedFactionFilterId
+                filteredFactionId = selectedFactionFilterId,
+                onArmyUnitTapped = { factionId, unitTypeId, cityName, count ->
+                    viewModel.openArmyUnitDetails(factionId, unitTypeId, cityName, count)
+                }
             )
 
             // Top Overlay: Interactive Faction Filter Buttons
@@ -142,17 +150,6 @@ fun CampaignMapScreen(
                     onOpenDiplomacy = { showDiplomacyDialog = true }
                 )
             }
-
-            // Top Right Overlay: Turn Tracker Display
-            TurnTrackerCard(
-                state = state,
-                onOpenTurnLogs = { viewModel.openTurnLogs() },
-                onEndTurn = { viewModel.endTurn() },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 48.dp, end = 8.dp)
-                    .width(280.dp)
-            )
 
             // Floating Resource Deltas Popup on Turn Change
             if (state.lastHarvestDeltas != null && state.lastHarvestDeltas!!.size == 4) {
@@ -240,6 +237,18 @@ fun CampaignMapScreen(
         )
     }
 
+    // Grade 6 Historical Educational Test Question Dialog (every 2nd turn, 25 tests total)
+    state.activeQuizQuestion?.let { quiz ->
+        HistoryQuizDialog(
+            question = quiz,
+            quizIndex = (state.answeredQuizzesCount + 1).coerceAtMost(25),
+            totalQuizzes = 25,
+            onAnswerSubmitted = { isCorrect, q ->
+                viewModel.resolveHistoryQuiz(isCorrect, q)
+            }
+        )
+    }
+
     // Battle Result Dialog
     if (battleResult != null) {
         BattleResultDialog(
@@ -274,6 +283,23 @@ fun CampaignMapScreen(
         logs = state.lastTurnLogs,
         onClose = { viewModel.closeTurnLogs() }
     )
+
+    // Room Persistent Unit Stats Modal Dialog
+    unitModalState?.let { modalData ->
+        UnitStatsModalDialog(
+            unit = modalData.unit,
+            faction = modalData.faction,
+            availableFactionUnits = modalData.availableFactionUnits,
+            cityName = modalData.cityName,
+            regimentCount = modalData.regimentCount,
+            onSelectUnit = { newUnit ->
+                viewModel.selectUnitInModal(newUnit)
+            },
+            onDismiss = {
+                viewModel.dismissUnitModal()
+            }
+        )
+    }
 
     // Campaign Over Dialog (50 turns or total conquest/defeat)
     if (state.isGameOver) {
