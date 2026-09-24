@@ -42,4 +42,14 @@ data class ResourceCost(
     val clay: Int = 0,
     val bronze: Int = 0,
     val silver: Int = 0
-)
+) {
+    val summary: String
+        get() {
+            val parts = mutableListOf<String>()
+            if (grain > 0) parts.add("$grain 🌾")
+            if (clay > 0) parts.add("$clay 🧱")
+            if (bronze > 0) parts.add("$bronze 🛡️")
+            if (silver > 0) parts.add("$silver 🪙")
+            return if (parts.isEmpty()) "Безкоштовно" else parts.joinToString(" • ")
+        }
+}

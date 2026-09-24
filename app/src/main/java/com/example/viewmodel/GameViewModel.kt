@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.audio.MesopotamianLyrePlayer
 import com.example.data.GameRepository
+import com.example.engine.TurnLogEngine
 import com.example.model.Building
 import com.example.model.City
 import com.example.model.DiplomaticStatus
@@ -415,12 +416,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         deltaGrain -= armyFoodUpkeep
 
         // 2. Advance building construction
+        val completedBuildingCities = mutableListOf<Pair<City, String>>()
         val updatedCities = current.cities.map { city ->
             if (city.buildingInProgress != null) {
                 val remaining = city.buildingTurnsRemaining - 1
                 if (remaining <= 0) {
                     // Finished!
                     val finishedBld = city.buildingInProgress
+                    if (city.factionId == current.playerFactionId) {
+                        completedBuildingCities.add(city to finishedBld)
+                    }
                     city.copy(
                         buildings = city.buildings + finishedBld,
                         buildingInProgress = null,
@@ -436,11 +441,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         var updatedResearchedTechs = current.researchedTechIds
         var updatedCurrentTech = current.currentTechId
         var updatedTechTurns = current.currentTechTurnsRemaining
+        var justCompletedTechId: String? = null
         if (updatedCurrentTech != null) {
             updatedTechTurns -= 1
             if (updatedTechTurns <= 0) {
                 updatedResearchedTechs = updatedResearchedTechs + updatedCurrentTech
-                val completedTech = Technology.getById(updatedCurrentTech)
+                justCompletedTechId = updatedCurrentTech
                 updatedCurrentTech = null
                 updatedTechTurns = 0
             }
@@ -464,7 +470,23 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             maxGrainStorage = maxCap
         )
 
-        // 5. Check for historical events (every 2-3 turns)
+        // 5. Generate Turn Events & AI Bot Actions
+        val stateForLogs = current.copy(cities = updatedCities)
+        val botResult = TurnLogEngine.processTurn(
+            state = stateForLogs,
+            deltaGrain = deltaGrain,
+            deltaClay = deltaClay,
+            deltaBronze = deltaBronze,
+            deltaSilver = deltaSilver,
+            armyFoodUpkeep = armyFoodUpkeep,
+            completedBuildingCities = completedBuildingCities,
+            completedTechId = justCompletedTechId
+        )
+
+        val finalCitiesWithBotUpdates = botResult.updatedCities
+        val newTurnLogs = botResult.logs
+
+        // 6. Check for historical events (every 2-3 turns)
         val nextEvent = if (current.turn % 2 == 0 && Random.nextBoolean()) {
             GameEvent.ALL_EVENTS.random()
         } else null
@@ -473,16 +495,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val nextYearBCE = current.yearBCE - 5
 
         // Check if 50-turn campaign limit is reached or player defeated
-        val playerCitiesLeft = updatedCities.count { it.factionId == current.playerFactionId }
+        val playerCitiesLeft = finalCitiesWithBotUpdates.count { it.factionId == current.playerFactionId }
         val isTimeExpired = nextTurn > current.maxTurns
         val isTotalDefeat = playerCitiesLeft == 0
         val isCampaignVictorious = playerCitiesLeft >= 4
 
-        val isGameOver = isTimeExpired || isTotalDefeat || playerCitiesLeft == updatedCities.size
+        val isGameOver = isTimeExpired || isTotalDefeat || playerCitiesLeft == finalCitiesWithBotUpdates.size
         val gameOverReason = when {
             isTotalDefeat -> "Поразка! Ворожі сили захопили всі ваші володіння у Межиріччі."
-            playerCitiesLeft == updatedCities.size -> "Абсолютна перемога! Усі міста Месопотамії від Перської затоки до гір Загросу об'єднані під вашим скіпетром!"
-            isTimeExpired && isCampaignVictorious -> "Тріумф 50 ходів! Ви об'єднали $playerCitiesLeft з ${updatedCities.size} міст Шумеру та створили наймогутнішу державу Бронзової доби!"
+            playerCitiesLeft == finalCitiesWithBotUpdates.size -> "Абсолютна перемога! Усі міста Месопотамії від Перської затоки до гір Загросу об'єднані під вашим скіпетром!"
+            isTimeExpired && isCampaignVictorious -> "Тріумф 50 ходів! Ви об'єднали $playerCitiesLeft з ${finalCitiesWithBotUpdates.size} міст Шумеру та створили наймогутнішу державу Бронзової доби!"
             isTimeExpired && playerCitiesLeft in 2..3 -> "Регіональна гегемонія! За 50 ходів правління ваше царство зберегло міцні позиції серед великих міст Межиріччя."
             isTimeExpired -> "50 ходів вичерпано. Ваше місто вистояло перед викликами часу, проте об'єднати Месопотамію не вдалося."
             else -> null
@@ -494,7 +516,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             turn = nextTurn,
             yearBCE = nextYearBCE,
             resources = updatedResources,
-            cities = updatedCities,
+            cities = finalCitiesWithBotUpdates,
+            wonders = botResult.updatedWonders,
             researchedTechIds = updatedResearchedTechs,
             currentTechId = updatedCurrentTech,
             currentTechTurnsRemaining = updatedTechTurns,
@@ -503,9 +526,96 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             isDefeat = isTotalDefeat,
             isGameOver = isGameOver,
             gameOverReason = gameOverReason,
-            chronicleLog = current.chronicleLog + logEntry
+            chronicleLog = current.chronicleLog + logEntry,
+            lastTurnLogs = newTurnLogs,
+            showTurnLogOverlay = !isGameOver,
+            lastHarvestDeltas = listOf(deltaGrain, deltaClay, deltaBronze, deltaSilver),
+            botCampaignSourceCityId = botResult.campaignSourceCityId,
+            botCampaignTargetCityId = botResult.campaignTargetCityId
         )
 
+        _gameState.value = nextState
+        repository.saveGame(nextState)
+    }
+
+    fun openTurnLogs() {
+        val current = _gameState.value
+        _gameState.value = current.copy(showTurnLogOverlay = true)
+    }
+
+    fun closeTurnLogs() {
+        val current = _gameState.value
+        _gameState.value = current.copy(showTurnLogOverlay = false)
+    }
+
+    fun openFactionsOverview() {
+        val current = _gameState.value
+        _gameState.value = current.copy(showFactionsOverview = true)
+    }
+
+    fun closeFactionsOverview() {
+        val current = _gameState.value
+        _gameState.value = current.copy(showFactionsOverview = false)
+    }
+
+    fun openMegaProjects() {
+        val current = _gameState.value
+        _gameState.value = current.copy(showMegaProjects = true)
+    }
+
+    fun closeMegaProjects() {
+        val current = _gameState.value
+        _gameState.value = current.copy(showMegaProjects = false)
+    }
+
+    fun contributeToWonder(wonderId: String, grainAmount: Int, clayAmount: Int, silverAmount: Int) {
+        val current = _gameState.value
+        val res = current.resources
+
+        if (res.grain < grainAmount || res.clay < clayAmount || res.silver < silverAmount) return
+
+        val newResources = res.copy(
+            grain = res.grain - grainAmount,
+            clay = res.clay - clayAmount,
+            silver = res.silver - silverAmount
+        )
+
+        val updatedWonders = current.wonders.map { wonder ->
+            if (wonder.id == wonderId && !wonder.isCompleted) {
+                val newGrain = wonder.grainSpent + grainAmount
+                val newClay = wonder.claySpent + clayAmount
+                val newSilver = wonder.silverSpent + silverAmount
+
+                val isStageDone = newGrain >= wonder.grainNeeded &&
+                        newClay >= wonder.clayNeeded &&
+                        newSilver >= wonder.silverNeeded
+
+                if (isStageDone) {
+                    val nextStage = wonder.stage + 1
+                    val isCompleted = nextStage > wonder.maxStages
+                    wonder.copy(
+                        stage = nextStage,
+                        isCompleted = isCompleted,
+                        grainSpent = 0,
+                        claySpent = 0,
+                        silverSpent = 0
+                    )
+                } else {
+                    wonder.copy(
+                        grainSpent = newGrain,
+                        claySpent = newClay,
+                        silverSpent = newSilver
+                    )
+                }
+            } else {
+                wonder
+            }
+        }
+
+        val nextState = current.copy(
+            resources = newResources,
+            wonders = updatedWonders
+        )
         _gameState.value = nextState
         repository.saveGame(nextState)
     }

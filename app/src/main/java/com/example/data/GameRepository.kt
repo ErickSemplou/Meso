@@ -147,7 +147,7 @@ class GameRepository(context: Context) {
 
             // Chronicle
             val chronArray = JSONArray()
-            state.chronicleLog.takeLast(25).forEach { chronArray.put(it) }
+            state.chronicleLog.takeLast(30).forEach { chronArray.put(it) }
             root.put("chronicleLog", chronArray)
 
             prefs.edit()
@@ -304,6 +304,15 @@ class GameRepository(context: Context) {
             val techArray = root.getJSONArray("researchedTechIds")
             for (i in 0 until techArray.length()) {
                 techs.add(techArray.getString(i))
+            }
+
+            // Decrees
+            val decrees = mutableSetOf<String>()
+            val decrArray = root.optJSONArray("activeDecreeIds")
+            if (decrArray != null) {
+                for (i in 0 until decrArray.length()) {
+                    decrees.add(decrArray.getString(i))
+                }
             }
 
             // Chronicle

@@ -1,22 +1,38 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import com.example.ui.components.FactionFilterBar
+import com.example.ui.components.FloatingResourceDeltas
 import com.example.ui.components.RomeCommandBar
 import com.example.ui.components.RomeTopBar
 import com.example.ui.components.StrategicMapCanvas
+import com.example.ui.components.TurnLogOverlay
+import com.example.ui.components.TurnTrackerCard
 import com.example.ui.dialogs.BattleResultDialog
 import com.example.ui.dialogs.CampaignGameOverDialog
 import com.example.ui.dialogs.ChronicleDialog
@@ -24,9 +40,14 @@ import com.example.ui.dialogs.CityManageDialog
 import com.example.ui.dialogs.CodexDialog
 import com.example.ui.dialogs.DiplomacyDialog
 import com.example.ui.dialogs.EventDialog
+import com.example.ui.dialogs.FactionsOverviewDialog
+import com.example.ui.dialogs.MegaProjectsDialog
 import com.example.ui.dialogs.RecruitmentDialog
 import com.example.ui.dialogs.TechTreeDialog
 import com.example.ui.theme.AncientParchment
+import com.example.ui.theme.AncientParchmentLight
+import com.example.ui.theme.BronzeDark
+import com.example.ui.theme.SumerianGold
 import com.example.viewmodel.GameViewModel
 
 @Composable
@@ -41,6 +62,9 @@ fun CampaignMapScreen(
     val battleResult by viewModel.battleResultDialog.collectAsState()
 
     val selectedCity = state.cities.find { it.id == selectedCityId }
+
+    // Interactive Faction Selection Filter
+    var selectedFactionFilterId by remember { mutableStateOf<String?>(null) }
 
     // Dialog visibility states
     var showBuildingDialog by remember { mutableStateOf(false) }
@@ -57,7 +81,10 @@ fun CampaignMapScreen(
                 isMusicMuted = isMusicMuted,
                 onToggleMusic = { viewModel.toggleMusic() },
                 onOpenCodex = { showCodexDialog = true },
-                onOpenChronicle = { showChronicleDialog = true }
+                onOpenChronicle = { showChronicleDialog = true },
+                onOpenTurnLogs = { viewModel.openTurnLogs() },
+                onOpenFactionsOverview = { viewModel.openFactionsOverview() },
+                onOpenMegaProjects = { viewModel.openMegaProjects() }
             )
         },
         bottomBar = {
@@ -87,13 +114,59 @@ fun CampaignMapScreen(
                 .background(AncientParchment)
                 .padding(2.dp)
         ) {
-            // Interactive Rome Total War Campaign Map
+            // Interactive Rome Total War Campaign Map Canvas
             StrategicMapCanvas(
                 cities = state.cities,
                 selectedCityId = selectedCityId,
                 playerFactionId = state.playerFactionId,
-                onCitySelected = { viewModel.selectCity(it) }
+                onCitySelected = { viewModel.selectCity(it) },
+                botCampaignSourceCityId = state.botCampaignSourceCityId,
+                botCampaignTargetCityId = state.botCampaignTargetCityId,
+                filteredFactionId = selectedFactionFilterId
             )
+
+            // Top Overlay: Interactive Faction Filter Buttons
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, start = 4.dp, end = 4.dp)
+            ) {
+                FactionFilterBar(
+                    state = state,
+                    selectedFactionId = selectedFactionFilterId,
+                    onFactionSelected = { factionId ->
+                        selectedFactionFilterId = factionId
+                    },
+                    onOpenFactionsOverview = { viewModel.openFactionsOverview() },
+                    onOpenDiplomacy = { showDiplomacyDialog = true }
+                )
+            }
+
+            // Top Right Overlay: Turn Tracker Display
+            TurnTrackerCard(
+                state = state,
+                onOpenTurnLogs = { viewModel.openTurnLogs() },
+                onEndTurn = { viewModel.endTurn() },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 48.dp, end = 8.dp)
+                    .width(280.dp)
+            )
+
+            // Floating Resource Deltas Popup on Turn Change
+            if (state.lastHarvestDeltas != null && state.lastHarvestDeltas!!.size == 4) {
+                FloatingResourceDeltas(
+                    visible = true,
+                    grainDelta = state.lastHarvestDeltas!![0],
+                    clayDelta = state.lastHarvestDeltas!![1],
+                    bronzeDelta = state.lastHarvestDeltas!![2],
+                    silverDelta = state.lastHarvestDeltas!![3],
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(bottom = 60.dp)
+                )
+            }
         }
     }
 
@@ -174,6 +247,33 @@ fun CampaignMapScreen(
             onDismiss = { viewModel.dismissBattleResult() }
         )
     }
+
+    if (state.showFactionsOverview) {
+        FactionsOverviewDialog(
+            gameState = state,
+            onClose = { viewModel.closeFactionsOverview() },
+            onOpenDiplomacy = { showDiplomacyDialog = true }
+        )
+    }
+
+    if (state.showMegaProjects) {
+        MegaProjectsDialog(
+            gameState = state,
+            onClose = { viewModel.closeMegaProjects() },
+            onContribute = { wonderId, grain, clay, silver ->
+                viewModel.contributeToWonder(wonderId, grain, clay, silver)
+            }
+        )
+    }
+
+    // Slide-in Turn Log Overlay
+    TurnLogOverlay(
+        isVisible = state.showTurnLogOverlay,
+        turn = state.turn,
+        yearBCE = state.yearBCE,
+        logs = state.lastTurnLogs,
+        onClose = { viewModel.closeTurnLogs() }
+    )
 
     // Campaign Over Dialog (50 turns or total conquest/defeat)
     if (state.isGameOver) {

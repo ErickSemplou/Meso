@@ -71,6 +71,9 @@ fun StrategicMapCanvas(
     selectedCityId: String?,
     playerFactionId: String,
     onCitySelected: (String) -> Unit,
+    botCampaignSourceCityId: String? = null,
+    botCampaignTargetCityId: String? = null,
+    filteredFactionId: String? = null,
     modifier: Modifier = Modifier
 ) {
     val pulseAnim = remember { Animatable(0.4f) }
@@ -214,6 +217,30 @@ fun StrategicMapCanvas(
                 style = Stroke(width = 3.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 6f), 0f))
             )
 
+            // -- Active Bot Campaign March Arrow --
+            if (botCampaignSourceCityId != null && botCampaignTargetCityId != null) {
+                val sourceCity = cities.find { it.id == botCampaignSourceCityId }
+                val targetCity = cities.find { it.id == botCampaignTargetCityId }
+                if (sourceCity != null && targetCity != null) {
+                    val p1 = Offset(sourceCity.mapX * widthPx, sourceCity.mapY * heightPx)
+                    val p2 = Offset(targetCity.mapX * widthPx, targetCity.mapY * heightPx)
+
+                    drawLine(
+                        color = Color(0xFFD32F2F).copy(alpha = 0.85f),
+                        start = p1,
+                        end = p2,
+                        strokeWidth = 6f,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 8f), caravanProgress.value * 50f)
+                    )
+
+                    drawCircle(
+                        color = Color(0xFFB71C1C),
+                        radius = 16f * pulseAnim.value,
+                        center = p2
+                    )
+                }
+            }
+
             // -- Selected City Tactical Aura --
             val selectedCity = cities.find { it.id == selectedCityId }
             if (selectedCity != null) {
@@ -280,6 +307,8 @@ fun StrategicMapCanvas(
             val faction = Faction.getById(city.factionId)
             val isPlayerCity = city.factionId == playerFactionId
             val isSelected = city.id == selectedCityId
+            val isFactionFiltered = filteredFactionId != null && city.factionId == filteredFactionId
+            val tokenAlpha = if (filteredFactionId == null || isFactionFiltered) 1f else 0.45f
 
             Box(
                 modifier = Modifier
@@ -287,6 +316,7 @@ fun StrategicMapCanvas(
                         x = (city.mapX * maxWidth.value).dp - 42.dp,
                         y = (city.mapY * maxHeight.value).dp - 36.dp
                     )
+                    .alpha(tokenAlpha)
                     .clickable { onCitySelected(city.id) }
                     .testTag("city_${city.id}")
             ) {
@@ -294,7 +324,7 @@ fun StrategicMapCanvas(
                     city = city,
                     faction = faction,
                     isPlayerCity = isPlayerCity,
-                    isSelected = isSelected
+                    isSelected = isSelected || isFactionFiltered
                 )
             }
         }

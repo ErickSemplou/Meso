@@ -17,11 +17,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.HourglassBottom
+import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Handshake
+import androidx.compose.material.icons.filled.HourglassBottom
+import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -47,7 +48,6 @@ import com.example.ui.theme.BronzeDark
 import com.example.ui.theme.BronzePrimary
 import com.example.ui.theme.ClaySlate
 import com.example.ui.theme.SumerianGold
-import com.example.ui.theme.SumerianGoldBright
 import com.example.ui.theme.TerracottaRed
 
 @Composable
@@ -56,10 +56,12 @@ fun RomeCommandBar(
     playerFactionId: String,
     currentTechId: String?,
     currentTechTurnsRemaining: Int,
+    activeDecreesCount: Int = 0,
     onOpenBuildingDialog: () -> Unit,
     onOpenRecruitmentDialog: () -> Unit,
     onOpenDiplomacyDialog: () -> Unit,
     onOpenTechDialog: () -> Unit,
+    onOpenDecreesDialog: () -> Unit = {},
     onAttackCity: () -> Unit,
     onEndTurn: () -> Unit,
     modifier: Modifier = Modifier
@@ -77,7 +79,7 @@ fun RomeCommandBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
-                .padding(horizontal = 8.dp, vertical = 6.dp)
+                .padding(horizontal = 6.dp, vertical = 5.dp)
                 .fillMaxWidth()
         ) {
             // Left: Selected City Overview Card with Unit Avatars & City Trait
@@ -87,24 +89,24 @@ fun RomeCommandBar(
                     color = AncientParchmentLight,
                     shape = RoundedCornerShape(8.dp),
                     border = androidx.compose.foundation.BorderStroke(1.5.dp, cityFaction.bannerColor),
-                    modifier = Modifier.width(310.dp)
+                    modifier = Modifier.width(260.dp)
                 ) {
-                    Column(modifier = Modifier.padding(6.dp)) {
+                    Column(modifier = Modifier.padding(5.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(12.dp)
+                                    .size(10.dp)
                                     .clip(CircleShape)
                                     .background(cityFaction.bannerColor)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = selectedCity.name,
-                                fontSize = 13.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = BronzeDark
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             // City Unique Trait Badge
                             Surface(
                                 color = SumerianGold.copy(alpha = 0.35f),
@@ -113,16 +115,16 @@ fun RomeCommandBar(
                             ) {
                                 Text(
                                     text = selectedCity.uniqueTrait,
-                                    fontSize = 8.sp,
+                                    fontSize = 7.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = BronzeDark,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.weight(1f))
                             Text(
-                                text = if (isPlayerOwned) "Наше місто" else cityFaction.name,
-                                fontSize = 9.sp,
+                                text = if (isPlayerOwned) "Наше" else cityFaction.name.take(4),
+                                fontSize = 8.5.sp,
                                 color = if (isPlayerOwned) Color(0xFF2E7D32) else TerracottaRed,
                                 fontWeight = FontWeight.Bold
                             )
@@ -131,12 +133,12 @@ fun RomeCommandBar(
                         // Garrison Units with Avatars
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier.padding(vertical = 2.dp)
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            modifier = Modifier.padding(vertical = 1.dp)
                         ) {
                             Text(
-                                text = "Війська: ",
-                                fontSize = 9.sp,
+                                text = "Військо: ",
+                                fontSize = 8.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = BronzeDark
                             )
@@ -146,13 +148,13 @@ fun RomeCommandBar(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier
                                             .background(AncientParchmentDark, RoundedCornerShape(4.dp))
-                                            .padding(horizontal = 3.dp, vertical = 1.dp)
+                                            .padding(horizontal = 2.dp, vertical = 1.dp)
                                     ) {
-                                        UnitAvatar(unitId = unitId, size = 18.dp)
-                                        Spacer(modifier = Modifier.width(2.dp))
+                                        UnitAvatar(unitId = unitId, size = 16.dp)
+                                        Spacer(modifier = Modifier.width(1.dp))
                                         Text(
                                             text = "x$count",
-                                            fontSize = 9.sp,
+                                            fontSize = 8.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = BronzeDark
                                         )
@@ -162,7 +164,7 @@ fun RomeCommandBar(
                             Spacer(modifier = Modifier.weight(1f))
                             Text(
                                 text = "🛡️ ${selectedCity.defenseRating}",
-                                fontSize = 9.sp,
+                                fontSize = 8.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = BronzeDark
                             )
@@ -172,7 +174,7 @@ fun RomeCommandBar(
                             val bld = Building.getById(selectedCity.buildingInProgress)
                             Text(
                                 text = "⏳ Будується: ${bld.name} (${selectedCity.buildingTurnsRemaining} х.)",
-                                fontSize = 8.sp,
+                                fontSize = 7.5.sp,
                                 color = BronzePrimary,
                                 fontWeight = FontWeight.Bold
                             )
@@ -181,16 +183,16 @@ fun RomeCommandBar(
                 }
             } else {
                 Text(
-                    text = "Оберіть місто на карті для управління",
-                    fontSize = 11.sp,
+                    text = "Оберіть місто на карті",
+                    fontSize = 10.sp,
                     color = BronzeDark,
-                    modifier = Modifier.width(260.dp)
+                    modifier = Modifier.width(180.dp)
                 )
             }
 
             // Center: Command Action Buttons
             Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (isPlayerOwned) {
@@ -217,16 +219,16 @@ fun RomeCommandBar(
                         ),
                         shape = RoundedCornerShape(6.dp),
                         modifier = Modifier
-                            .height(46.dp)
+                            .height(44.dp)
                             .testTag("attack_city_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Shield,
                             contentDescription = "Штурм",
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(15.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "Похід на ${selectedCity.name}", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(text = "Похід на ${selectedCity.name}", fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -238,8 +240,16 @@ fun RomeCommandBar(
                 )
 
                 CommandTabButton(
+                    icon = Icons.Default.Gavel,
+                    title = "Закони",
+                    testTag = "tab_decrees",
+                    badge = if (activeDecreesCount > 0) "$activeDecreesCount" else null,
+                    onClick = onOpenDecreesDialog
+                )
+
+                CommandTabButton(
                     icon = Icons.Default.Science,
-                    title = if (currentTech != null) "${currentTech.name.take(6)}.. (${currentTechTurnsRemaining})" else "Наука",
+                    title = if (currentTech != null) "${currentTech.name.take(5)}..(${currentTechTurnsRemaining})" else "Наука",
                     testTag = "tab_tech",
                     badge = if (currentTech == null) "!" else null,
                     onClick = onOpenTechDialog
@@ -256,8 +266,8 @@ fun RomeCommandBar(
                 shape = RoundedCornerShape(8.dp),
                 border = androidx.compose.foundation.BorderStroke(2.dp, BronzeDark),
                 modifier = Modifier
-                    .height(50.dp)
-                    .width(136.dp)
+                    .height(48.dp)
+                    .width(125.dp)
                     .testTag("end_turn_button")
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -266,19 +276,19 @@ fun RomeCommandBar(
                             imageVector = Icons.Default.HourglassBottom,
                             contentDescription = "Кінець ходу",
                             tint = BronzeDark,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(15.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
                         Text(
                             text = "Кінець ходу",
-                            fontSize = 11.sp,
+                            fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = BronzeDark
                         )
                     }
                     Text(
                         text = "Хід гравця",
-                        fontSize = 8.sp,
+                        fontSize = 7.5.sp,
                         color = Color(0xFF4E342E)
                     )
                 }
@@ -304,7 +314,7 @@ fun CommandTabButton(
             .testTag(testTag)
     ) {
         Box(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 5.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -316,22 +326,25 @@ fun CommandTabButton(
                         imageVector = icon,
                         contentDescription = title,
                         tint = BronzePrimary,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(17.dp)
                     )
                     if (badge != null) {
                         Box(
                             modifier = Modifier
-                                .size(8.dp)
+                                .size(9.dp)
                                 .clip(CircleShape)
                                 .background(TerracottaRed)
-                                .align(Alignment.TopEnd)
-                        )
+                                .align(Alignment.TopEnd),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = badge, fontSize = 6.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(1.dp))
                 Text(
                     text = title,
-                    fontSize = 10.sp,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
                     color = BronzeDark
                 )

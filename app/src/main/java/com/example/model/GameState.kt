@@ -17,7 +17,15 @@ data class GameState(
     val isVictory: Boolean = false,
     val isDefeat: Boolean = false,
     val isGameOver: Boolean = false,
-    val gameOverReason: String? = null
+    val gameOverReason: String? = null,
+    val lastTurnLogs: List<TurnLogItem> = emptyList(),
+    val showTurnLogOverlay: Boolean = false,
+    val wonders: List<MegaProject> = MegaProject.ALL_WONDERS,
+    val showFactionsOverview: Boolean = false,
+    val showMegaProjects: Boolean = false,
+    val lastHarvestDeltas: List<Int>? = null,
+    val botCampaignSourceCityId: String? = null,
+    val botCampaignTargetCityId: String? = null
 ) {
     val playerFaction: Faction
         get() = Faction.getById(playerFactionId)

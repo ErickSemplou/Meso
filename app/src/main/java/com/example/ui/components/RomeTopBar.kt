@@ -15,9 +15,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Fort
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.HistoryEdu
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.MusicOff
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -46,6 +49,9 @@ fun RomeTopBar(
     onToggleMusic: () -> Unit,
     onOpenCodex: () -> Unit,
     onOpenChronicle: () -> Unit,
+    onOpenTurnLogs: () -> Unit,
+    onOpenFactionsOverview: () -> Unit = {},
+    onOpenMegaProjects: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -167,6 +173,48 @@ fun RomeTopBar(
                         imageVector = if (isMusicMuted) Icons.Default.MusicOff else Icons.Default.MusicNote,
                         contentDescription = if (isMusicMuted) "Увімкнути музику" else "Вимкнути музику",
                         tint = if (isMusicMuted) Color.Gray else BronzePrimary,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = onOpenFactionsOverview,
+                    modifier = Modifier
+                        .size(34.dp)
+                        .testTag("open_factions_overview_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Groups,
+                        contentDescription = "Перебіг розвитку держав",
+                        tint = BronzePrimary,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = onOpenMegaProjects,
+                    modifier = Modifier
+                        .size(34.dp)
+                        .testTag("open_megaprojects_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Fort,
+                        contentDescription = "Дива Світу",
+                        tint = SumerianGold,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = onOpenTurnLogs,
+                    modifier = Modifier
+                        .size(34.dp)
+                        .testTag("open_turn_logs_button")
+                ) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.Notifications,
+                        contentDescription = "Вісті ходу",
+                        tint = SumerianGold,
                         modifier = Modifier.size(19.dp)
                     )
                 }
