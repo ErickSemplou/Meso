@@ -27,7 +27,10 @@ data class GameState(
     val botCampaignSourceCityId: String? = null,
     val botCampaignTargetCityId: String? = null,
     val activeQuizQuestion: HistoryQuizQuestion? = null,
-    val answeredQuizzesCount: Int = 0
+    val answeredQuizzesCount: Int = 0,
+    val activeLaws: Set<String> = emptySet(),
+    val activeBattle: ActiveTacticalBattle? = null,
+    val showLawsDialog: Boolean = false
 ) {
     val playerFaction: Faction
         get() = Faction.getById(playerFactionId)
@@ -53,7 +56,12 @@ data class GameState(
         get() = playerCities.sumOf { it.population }
 
     val totalMilitaryPower: Int
-        get() = playerCities.sumOf { it.totalMilitaryPower }
+        get() {
+            var pwr = playerCities.sumOf { it.totalMilitaryPower }
+            if ("lex_talionis_eye_for_eye" in activeLaws) pwr = (pwr * 1.10).toInt()
+            if ("royal_bronze_monopoly" in activeLaws) pwr = (pwr * 1.20).toInt()
+            return pwr
+        }
 
     // Net income calculations per turn
     val netIncomeGrain: Int
@@ -66,6 +74,8 @@ data class GameState(
                 inc += city.bonusGrain
             }
             if (researchedTechIds.contains("seed_plow")) inc = (inc * 1.35).toInt()
+            if ("ilku_corvee_canals" in activeLaws) inc += 40
+            if ("temple_sacred_tithe" in activeLaws) inc -= 25
             val totalTroops = playerCities.sumOf { it.garrison.values.sum() }
             val foodUpkeep = totalTroops * 4
             return inc - foodUpkeep
@@ -81,6 +91,8 @@ data class GameState(
                 inc += city.bonusClay
             }
             if (researchedTechIds.contains("pottery_wheel")) inc = (inc * 1.20).toInt()
+            if ("ilku_corvee_canals" in activeLaws) inc += 20
+            if ("standard_shekel_mina" in activeLaws) inc -= 15
             return inc
         }
 
@@ -94,6 +106,7 @@ data class GameState(
                 inc += city.bonusBronze
             }
             if (playerFactionId == "lagash") inc = (inc * 1.20).toInt()
+            if ("royal_bronze_monopoly" in activeLaws) inc += 25
             return inc
         }
 
@@ -108,6 +121,10 @@ data class GameState(
             }
             if (playerFactionId == "ur") inc = (inc * 1.25).toInt()
             if (researchedTechIds.contains("cuneiform")) inc = (inc * 1.15).toInt()
+            if ("misharum_debt_relief" in activeLaws) inc -= 15
+            if ("standard_shekel_mina" in activeLaws) inc += 35
+            if ("royal_bronze_monopoly" in activeLaws) inc -= 25
+            if ("ilku_corvee_canals" in activeLaws) inc -= 10
             // Trade pact bonus
             relations.values.filter { it.status == DiplomaticStatus.TRADE_PACT }.forEach {
                 inc += 20

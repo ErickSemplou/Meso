@@ -9,6 +9,8 @@ import com.example.data.UnitRepository
 import com.example.data.local.AppDatabase
 import com.example.data.local.UnitEntity
 import com.example.engine.TurnLogEngine
+import com.example.model.ActiveTacticalBattle
+import com.example.model.BattleTactics
 import com.example.model.Building
 import com.example.model.City
 import com.example.model.DiplomaticStatus
@@ -17,6 +19,7 @@ import com.example.model.FactionRelation
 import com.example.model.GameEvent
 import com.example.model.GameState
 import com.example.model.HistoryQuizQuestion
+import com.example.model.LawEdict
 import com.example.model.PlayerResources
 import com.example.model.ResourceCost
 import com.example.model.Technology
@@ -312,28 +315,52 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val targetCity = current.cities.find { it.id == targetCityId } ?: return
         if (targetCity.factionId == current.playerFactionId) return
 
-        // Attacking army calculated from player's nearest/strongest city
         val attackerCity = current.playerCities.maxByOrNull { it.totalMilitaryPower } ?: return
-        val attackerPower = attackerCity.totalMilitaryPower
+        var attackerPower = attackerCity.totalMilitaryPower
+        if ("lex_talionis_eye_for_eye" in current.activeLaws) attackerPower = (attackerPower * 1.10).toInt()
+        if ("royal_bronze_monopoly" in current.activeLaws) attackerPower = (attackerPower * 1.20).toInt()
+
         val defenderPower = targetCity.defenseRating
+        val targetFaction = Faction.getById(targetCity.factionId)
 
-        // Battle calculation with dice variance
-        val roll = Random.nextInt(85, 120)
-        val finalAttackerScore = (attackerPower * (roll / 100.0)).toInt()
-        val finalDefenderScore = defenderPower
+        val tacticalBattle = ActiveTacticalBattle(
+            attackerCity = attackerCity,
+            defenderCity = targetCity,
+            attackerFaction = current.playerFaction,
+            defenderFaction = targetFaction,
+            attackerPower = attackerPower,
+            defenderPower = defenderPower,
+            defenderWallLevel = targetCity.defenseRating,
+            selectedTacticsId = "shield_wall"
+        )
 
-        val isVictorious = finalAttackerScore >= finalDefenderScore
+        _gameState.value = current.copy(activeBattle = tacticalBattle)
+    }
+
+    fun executeTacticalBattle(selectedTacticsId: String) {
+        val current = _gameState.value
+        val battle = current.activeBattle ?: return
+
+        val tactic = BattleTactics.ALL_TACTICS.find { it.id == selectedTacticsId } ?: BattleTactics.ALL_TACTICS.first()
+        val attackerMultiplier = 1.0 + (tactic.attackBonusPercent / 100.0)
+        val wallBreachEffect = tactic.wallBreachBonusPercent / 100.0
+
+        val effectiveAttacker = (battle.attackerPower * attackerMultiplier * (Random.nextInt(90, 125) / 100.0)).toInt()
+        val effectiveDefender = (battle.defenderPower * (1.0 - wallBreachEffect * 0.4)).toInt()
+
+        val isVictorious = effectiveAttacker >= effectiveDefender
+
+        val lootSilver = if (isVictorious) 130 else 0
+        val lootGrain = if (isVictorious) 90 else 0
 
         val updatedCities = current.cities.map { city ->
-            if (city.id == targetCityId && isVictorious) {
-                // City conquered!
+            if (city.id == battle.defenderCity.id && isVictorious) {
                 city.copy(
                     factionId = current.playerFactionId,
                     loyalty = 60,
                     garrison = mapOf("spearmen" to 2)
                 )
-            } else if (city.id == attackerCity.id) {
-                // Casualties
+            } else if (city.id == battle.attackerCity.id) {
                 val updatedGarrison = city.garrison.mapValues { (_, count) ->
                     (count - 1).coerceAtLeast(1)
                 }
@@ -341,29 +368,26 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             } else city
         }
 
-        val lootSilver = if (isVictorious) 120 else 0
-        val lootGrain = if (isVictorious) 80 else 0
         val updatedResources = if (isVictorious) {
             current.resources.add(PlayerResources(silver = lootSilver, grain = lootGrain, loyalty = 10))
         } else {
             current.resources.copy(loyalty = (current.resources.loyalty - 10).coerceAtLeast(10))
         }
 
-        val battleTitle = if (isVictorious) "Тріумф під мурами ${targetCity.name}!" else "Відступ від стін ${targetCity.name}"
+        val battleTitle = if (isVictorious) "Тріумф тактики під мурами ${battle.defenderCity.name}!" else "Відступ від стін ${battle.defenderCity.name}"
         val battleDetails = if (isVictorious) {
-            "Ваші шумерські фаланги та лучники прорвали ворожі укріплення! Місто ${targetCity.name} визнало владу нашого правителя. Захоплено трофеї: +$lootSilver срібла та +$lootGrain зерна."
+            "Завдяки маневру «${tactic.name}» шумерські фаланги прорвали оборону! Місто ${battle.defenderCity.name} приєднано до держави. Здобуто трофеї: +$lootSilver срібла, +$lootGrain зерна."
         } else {
-            "Ворожі мури виявилися занадто міцними. Наші воїни завдали втрат супернику, але змушені були відступити до ${attackerCity.name} для перегрупування."
+            "Незважаючи на застосування «${tactic.name}», гарнізон ${battle.defenderCity.name} відбив напад. Воїни організовано відступили до ${battle.attackerCity.name}."
         }
 
         _battleResultDialog.value = BattleResult(
             title = battleTitle,
             isVictory = isVictorious,
             details = battleDetails,
-            conqueredCityName = if (isVictorious) targetCity.name else null
+            conqueredCityName = if (isVictorious) battle.defenderCity.name else null
         )
 
-        // Check if victory condition met (controlling at least 5 cities)
         val controlledCities = updatedCities.count { it.factionId == current.playerFactionId }
         val isCampaignWon = controlledCities >= 5
 
@@ -371,7 +395,63 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             cities = updatedCities,
             resources = updatedResources,
             isVictory = isCampaignWon,
+            activeBattle = null,
             chronicleLog = current.chronicleLog + "$battleTitle. $battleDetails"
+        )
+        _gameState.value = nextState
+        repository.saveGame(nextState)
+    }
+
+    fun autoResolveTacticalBattle() {
+        val current = _gameState.value
+        val battle = current.activeBattle ?: return
+        executeTacticalBattle(battle.selectedTacticsId)
+    }
+
+    fun dismissTacticalBattle() {
+        val current = _gameState.value
+        _gameState.value = current.copy(activeBattle = null)
+    }
+
+    fun openLawsDialog() {
+        val current = _gameState.value
+        _gameState.value = current.copy(showLawsDialog = true)
+    }
+
+    fun closeLawsDialog() {
+        val current = _gameState.value
+        _gameState.value = current.copy(showLawsDialog = false)
+    }
+
+    fun enactLaw(lawId: String) {
+        val current = _gameState.value
+        val law = LawEdict.ALL_LAWS.find { it.id == lawId } ?: return
+        if (current.resources.silver < law.requiredSilverToEnact) return
+
+        val updatedSilver = current.resources.silver - law.requiredSilverToEnact
+        val updatedPiety = (current.resources.piety + law.pietyModifier).coerceIn(0, 100)
+        val updatedLaws = current.activeLaws + lawId
+
+        val log = "Введено в дію едикт «${law.name}» (${law.origin})."
+
+        val nextState = current.copy(
+            resources = current.resources.copy(silver = updatedSilver, piety = updatedPiety),
+            activeLaws = updatedLaws,
+            chronicleLog = current.chronicleLog + log
+        )
+        _gameState.value = nextState
+        repository.saveGame(nextState)
+    }
+
+    fun repealLaw(lawId: String) {
+        val current = _gameState.value
+        val law = LawEdict.ALL_LAWS.find { it.id == lawId }
+        val updatedLaws = current.activeLaws - lawId
+        val log = "Скасовано дію едикту «${law?.name ?: lawId}»."
+
+        val nextState = current.copy(
+            activeLaws = updatedLaws,
+            chronicleLog = current.chronicleLog + log
         )
         _gameState.value = nextState
         repository.saveGame(nextState)

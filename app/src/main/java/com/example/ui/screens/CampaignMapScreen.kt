@@ -41,8 +41,10 @@ import com.example.ui.dialogs.DiplomacyDialog
 import com.example.ui.dialogs.EventDialog
 import com.example.ui.dialogs.FactionsOverviewDialog
 import com.example.ui.dialogs.HistoryQuizDialog
+import com.example.ui.dialogs.LawsDialog
 import com.example.ui.dialogs.MegaProjectsDialog
 import com.example.ui.dialogs.RecruitmentDialog
+import com.example.ui.dialogs.TacticalBattleDialog
 import com.example.ui.dialogs.TechTreeDialog
 import com.example.ui.dialogs.UnitStatsModalDialog
 import com.example.ui.theme.AncientParchment
@@ -86,7 +88,8 @@ fun CampaignMapScreen(
                 onOpenChronicle = { showChronicleDialog = true },
                 onOpenTurnLogs = { viewModel.openTurnLogs() },
                 onOpenFactionsOverview = { viewModel.openFactionsOverview() },
-                onOpenMegaProjects = { viewModel.openMegaProjects() }
+                onOpenMegaProjects = { viewModel.openMegaProjects() },
+                onOpenLaws = { viewModel.openLawsDialog() }
             )
         },
         bottomBar = {
@@ -119,12 +122,13 @@ fun CampaignMapScreen(
                 .background(AncientParchment)
                 .padding(2.dp)
         ) {
-            // Interactive Rome Total War Campaign Map Canvas
+            // Interactive Rome Total War Campaign Map Canvas with Seasonal Visuals
             StrategicMapCanvas(
                 cities = state.cities,
                 selectedCityId = selectedCityId,
                 playerFactionId = state.playerFactionId,
                 onCitySelected = { viewModel.selectCity(it) },
+                turn = state.turn,
                 botCampaignSourceCityId = state.botCampaignSourceCityId,
                 botCampaignTargetCityId = state.botCampaignTargetCityId,
                 filteredFactionId = selectedFactionFilterId,
@@ -148,20 +152,6 @@ fun CampaignMapScreen(
                     },
                     onOpenFactionsOverview = { viewModel.openFactionsOverview() },
                     onOpenDiplomacy = { showDiplomacyDialog = true }
-                )
-            }
-
-            // Floating Resource Deltas Popup on Turn Change
-            if (state.lastHarvestDeltas != null && state.lastHarvestDeltas!!.size == 4) {
-                FloatingResourceDeltas(
-                    visible = true,
-                    grainDelta = state.lastHarvestDeltas!![0],
-                    clayDelta = state.lastHarvestDeltas!![1],
-                    bronzeDelta = state.lastHarvestDeltas!![2],
-                    silverDelta = state.lastHarvestDeltas!![3],
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(bottom = 60.dp)
                 )
             }
         }
@@ -245,6 +235,39 @@ fun CampaignMapScreen(
             totalQuizzes = 25,
             onAnswerSubmitted = { isCorrect, q ->
                 viewModel.resolveHistoryQuiz(isCorrect, q)
+            }
+        )
+    }
+
+    // Tactical Battle Dialog (Interactive Rome: Total War style battle screen)
+    state.activeBattle?.let { battle ->
+        TacticalBattleDialog(
+            battle = battle,
+            onExecuteBattle = { tacticId ->
+                viewModel.executeTacticalBattle(tacticId)
+            },
+            onAutoResolve = {
+                viewModel.autoResolveTacticalBattle()
+            },
+            onDismiss = {
+                viewModel.dismissTacticalBattle()
+            }
+        )
+    }
+
+    // Laws and Reforms Dialog (Urukagina, Ur-Nammu, Hammurabi)
+    if (state.showLawsDialog) {
+        LawsDialog(
+            activeLaws = state.activeLaws,
+            resources = state.resources,
+            onEnactLaw = { lawId ->
+                viewModel.enactLaw(lawId)
+            },
+            onRepealLaw = { lawId ->
+                viewModel.repealLaw(lawId)
+            },
+            onDismiss = {
+                viewModel.closeLawsDialog()
             }
         )
     }

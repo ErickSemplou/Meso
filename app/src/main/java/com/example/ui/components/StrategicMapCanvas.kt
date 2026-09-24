@@ -68,6 +68,7 @@ fun StrategicMapCanvas(
     selectedCityId: String?,
     playerFactionId: String,
     onCitySelected: (String) -> Unit,
+    turn: Int = 1,
     botCampaignSourceCityId: String? = null,
     botCampaignTargetCityId: String? = null,
     filteredFactionId: String? = null,
@@ -328,6 +329,104 @@ fun StrategicMapCanvas(
                         pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f), 0f)
                     )
                 )
+            }
+
+            // H. Dynamic Seasonal Visual Objects (Mesopotamian 4 Seasons)
+            val seasonIndex = turn % 4
+            when (seasonIndex) {
+                1 -> {
+                    // Season: Spring Flooding (Нісанну) - Alluvial Overflow & Lush Reeds
+                    val floodZones = listOf(
+                        Offset(widthPx * 0.30f, heightPx * 0.40f),
+                        Offset(widthPx * 0.48f, heightPx * 0.58f),
+                        Offset(widthPx * 0.62f, heightPx * 0.70f)
+                    )
+                    floodZones.forEach { fCenter ->
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color(0xFF00ACC1).copy(alpha = 0.30f * pulseAnim.value),
+                                    Color(0xFF4DD0E1).copy(alpha = 0.12f),
+                                    Color.Transparent
+                                ),
+                                center = fCenter,
+                                radius = 40.dp.toPx()
+                            ),
+                            radius = 40.dp.toPx(),
+                            center = fCenter
+                        )
+                    }
+                }
+                2 -> {
+                    // Season: Summer Barley Harvest (Ташріту) - Golden Fields of Grain
+                    val harvestFields = listOf(
+                        Offset(widthPx * 0.38f, heightPx * 0.34f),
+                        Offset(widthPx * 0.52f, heightPx * 0.42f),
+                        Offset(widthPx * 0.44f, heightPx * 0.65f)
+                    )
+                    harvestFields.forEach { hCenter ->
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color(0xFFFFD54F).copy(alpha = 0.35f),
+                                    Color(0xFFFFB300).copy(alpha = 0.15f),
+                                    Color.Transparent
+                                ),
+                                center = hCenter,
+                                radius = 36.dp.toPx()
+                            ),
+                            radius = 36.dp.toPx(),
+                            center = hCenter
+                        )
+                    }
+                }
+                3 -> {
+                    // Season: Autumn Plowing & Seeding (Арахсамну) - Rich Dark Silt Furrows
+                    val plowZones = listOf(
+                        Offset(widthPx * 0.28f, heightPx * 0.30f),
+                        Offset(widthPx * 0.45f, heightPx * 0.48f),
+                        Offset(widthPx * 0.58f, heightPx * 0.58f)
+                    )
+                    plowZones.forEach { pCenter ->
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color(0xFF795548).copy(alpha = 0.35f),
+                                    Color(0xFF4E342E).copy(alpha = 0.15f),
+                                    Color.Transparent
+                                ),
+                                center = pCenter,
+                                radius = 34.dp.toPx()
+                            ),
+                            radius = 34.dp.toPx(),
+                            center = pCenter
+                        )
+                    }
+                }
+                else -> {
+                    // Season: Winter Akitu Temple Braziers & Torches (Зима)
+                    val templeFires = listOf(
+                        Offset(widthPx * 0.25f, heightPx * 0.20f),
+                        Offset(widthPx * 0.42f, heightPx * 0.30f),
+                        Offset(widthPx * 0.35f, heightPx * 0.60f),
+                        Offset(widthPx * 0.62f, heightPx * 0.50f)
+                    )
+                    templeFires.forEach { tCenter ->
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color(0xFFFF7043).copy(alpha = 0.40f * pulseAnim.value),
+                                    Color(0xFFFFAB91).copy(alpha = 0.15f),
+                                    Color.Transparent
+                                ),
+                                center = tCenter,
+                                radius = 28.dp.toPx()
+                            ),
+                            radius = 28.dp.toPx(),
+                            center = tCenter
+                        )
+                    }
+                }
             }
         }
 

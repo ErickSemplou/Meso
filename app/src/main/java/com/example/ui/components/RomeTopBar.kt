@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Fort
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.HistoryEdu
@@ -40,6 +41,7 @@ import com.example.ui.theme.AncientParchmentLight
 import com.example.ui.theme.BronzeDark
 import com.example.ui.theme.BronzePrimary
 import com.example.ui.theme.SumerianGold
+import com.example.ui.theme.SumerianGoldBright
 import com.example.ui.theme.TerracottaRed
 
 @Composable
@@ -52,6 +54,7 @@ fun RomeTopBar(
     onOpenTurnLogs: () -> Unit,
     onOpenFactionsOverview: () -> Unit = {},
     onOpenMegaProjects: () -> Unit = {},
+    onOpenLaws: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -201,6 +204,20 @@ fun RomeTopBar(
                         imageVector = Icons.Default.Fort,
                         contentDescription = "Дива Світу",
                         tint = SumerianGold,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = onOpenLaws,
+                    modifier = Modifier
+                        .size(34.dp)
+                        .testTag("open_laws_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Balance,
+                        contentDescription = "Кодекс Законів та Реформ",
+                        tint = SumerianGoldBright,
                         modifier = Modifier.size(19.dp)
                     )
                 }

@@ -1,391 +1,408 @@
 package com.example.ui.dialogs
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.example.model.City
-import com.example.model.DefensiveSiegeEngagement
-import com.example.model.Faction
-import com.example.ui.components.UnitAvatar
-import com.example.ui.theme.AncientParchmentDark
+import androidx.compose.ui.window.DialogProperties
+import com.example.audio.SoundEffects
+import com.example.model.ActiveTacticalBattle
+import com.example.model.BattleTactics
 import com.example.ui.theme.AncientParchmentLight
 import com.example.ui.theme.BronzeDark
 import com.example.ui.theme.BronzePrimary
-import com.example.ui.theme.ClaySlate
 import com.example.ui.theme.SumerianGold
+import com.example.ui.theme.SumerianGoldBright
 import com.example.ui.theme.TerracottaRed
-
-enum class BattleTactic(
-    val title: String,
-    val description: String,
-    val attackMod: Float,
-    val defenseMod: Float,
-    val historyFact: String
-) {
-    PHALANX_WALL(
-        title = "Стіна бронзових щитів",
-        description = "Воїни змикають прямокутні щити в монолітний стрій. Списи виставлені вперед.",
-        attackMod = 1.1f,
-        defenseMod = 1.4f,
-        historyFact = "Шумерська фаланга — найдавніший організований стрій у світі! Жоден кінний набіг не міг пробити цю бронзову стіну."
-    ),
-    CHARIOT_CHARGE(
-        title = "Фланговий удар онагрів",
-        description = "Важкі чотириколісні колісниці таранять фланг ворога на повній швидкості.",
-        attackMod = 1.45f,
-        defenseMod = 0.85f,
-        historyFact = "Колісниці Шумеру важили понад пів тонни! Вони діяли як танки Бронзової доби, розсіюючи ворожу піхоту."
-    ),
-    ARCHER_VOLLEY(
-        title = "Залп очеретяних стріл",
-        description = "Стрільці зі стін та насипів осипають ворога густим градом стріл.",
-        attackMod = 1.25f,
-        defenseMod = 1.1f,
-        historyFact = "Шумерські стріли мали мідні вістря з шипами, які важко було витягти без важких ушкоджень."
-    ),
-    DEFENSIVE_WALLS(
-        title = "Оборона за мурами міста",
-        description = "Захисники утримують браму та вежі з цегли-сирцю, скидаючи каміння та бітум.",
-        attackMod = 0.95f,
-        defenseMod = 1.55f,
-        historyFact = "Мури міст Межиріччя сягали 10 метрів завтовшки, тому прямий штурм без облоги був майже самогубством."
-    )
-}
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun TacticalBattleDialog(
-    siege: DefensiveSiegeEngagement,
-    city: City,
-    playerFactionId: String,
-    onResolveTacticalBattle: (BattleTactic, payRansom: Boolean) -> Unit,
+    battle: ActiveTacticalBattle,
+    onExecuteBattle: (selectedTacticsId: String) -> Unit,
+    onAutoResolve: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val attackingFaction = Faction.getById(siege.attackingFactionId)
-    var selectedTactic by remember { mutableStateOf(BattleTactic.PHALANX_WALL) }
+    var selectedTacticsId by remember { mutableStateOf(battle.selectedTacticsId) }
     var isBattling by remember { mutableStateOf(false) }
-    val battleClashAnim = remember { Animatable(0.5f) }
+    var combatPhase by remember { mutableIntStateOf(0) } // 0: Briefing/Plan, 1: Clash, 2: Final Result
 
-    LaunchedEffect(isBattling) {
-        if (isBattling) {
-            battleClashAnim.animateTo(0.8f, tween(800, easing = LinearEasing))
-            battleClashAnim.animateTo(0.2f, tween(800, easing = LinearEasing))
-            battleClashAnim.animateTo(0.6f, tween(600, easing = LinearEasing))
-            onResolveTacticalBattle(selectedTactic, false)
-        }
-    }
+    var attackerMorale by remember { mutableFloatStateOf(1.0f) }
+    var defenderMorale by remember { mutableFloatStateOf(1.0f) }
+    val roundLogs = remember { mutableStateListOf<String>() }
 
-    Dialog(onDismissRequest = { if (!isBattling) onDismiss() }) {
+    val coroutineScope = rememberCoroutineScope()
+
+    Dialog(
+        onDismissRequest = {
+            if (!isBattling) onDismiss()
+        },
+        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
+    ) {
         Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = AncientParchmentLight,
-            border = androidx.compose.foundation.BorderStroke(2.5.dp, TerracottaRed),
+            color = Color(0xFF1B1208),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(2.5.dp, SumerianGold),
             shadowElevation = 24.dp,
             modifier = Modifier
-                .fillMaxWidth(0.98f)
-                .padding(4.dp)
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.92f)
                 .testTag("tactical_battle_dialog")
         ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                // Battle Header
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(14.dp)
+            ) {
+                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(TerracottaRed),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Shield,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = "ТАКТИЧНИЙ БІЙ: ОБЛОГА ${city.name.uppercase()}",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Black,
-                                color = TerracottaRed
-                            )
-                            Text(
-                                text = "Напад ворожих сил: ${attackingFaction.name}",
-                                fontSize = 9.sp,
-                                color = ClaySlate
-                            )
-                        }
+                    Text(text = "⚔️", fontSize = 24.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "ТАКТИЧНИЙ ЕКРАН БОЮ: БИТВА ЗА ${battle.defenderCity.name.uppercase()}",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Black,
+                            color = SumerianGoldBright
+                        )
+                        Text(
+                            text = "Штурм та польовий бій армій Бронзової доби • 2600 р. до н.е.",
+                            fontSize = 10.sp,
+                            color = Color(0xFFD7CCC8)
+                        )
                     }
-                    if (!isBattling) {
-                        IconButton(onClick = onDismiss, modifier = Modifier.size(26.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = "Закрити", tint = BronzeDark)
+                    if (!isBattling && combatPhase != 1) {
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Default.Close, contentDescription = "Закрити", tint = SumerianGold)
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Armies Comparison Display
+                // Armies Comparison Bar
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF2B1B0E), RoundedCornerShape(10.dp))
+                        .padding(10.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Our garrison
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = AncientParchmentDark),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, SumerianGold),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = "Захисники ${city.name}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BronzeDark)
-                            Text(text = "Сила оборони: 🛡️ ${city.defenseRating}", fontSize = 10.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                city.garrison.forEach { (unitId, count) ->
-                                    if (count > 0) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            UnitAvatar(unitId = unitId, size = 20.dp)
-                                            Text(text = "x$count", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = BronzeDark)
-                                        }
-                                    }
-                                }
-                            }
+                    // Attacker (Player)
+                    Column(horizontalAlignment = Alignment.Start) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                color = battle.attackerFaction.bannerColor,
+                                shape = RoundedCornerShape(3.dp),
+                                modifier = Modifier.size(14.dp)
+                            ) {}
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "${battle.attackerFaction.name}: ${battle.attackerCity.name}",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
                         }
+                        Text(
+                            text = "Військова міць: ${battle.attackerPower} воїнів",
+                            color = SumerianGold,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        LinearProgressIndicator(
+                            progress = { attackerMorale },
+                            color = Color(0xFF2E7D32),
+                            trackColor = Color(0xFF1E3A20),
+                            modifier = Modifier
+                                .width(130.dp)
+                                .height(6.dp)
+                        )
                     }
 
                     Text(
                         text = "VS",
-                        fontSize = 14.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Black,
-                        color = TerracottaRed,
-                        modifier = Modifier.padding(horizontal = 6.dp)
+                        color = TerracottaRed
                     )
 
-                    // Attacker army
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = AncientParchmentDark),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, TerracottaRed),
-                        modifier = Modifier.weight(1f)
+                    // Defender
+                    Column(horizontalAlignment = Alignment.End) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "${battle.defenderFaction.name}: ${battle.defenderCity.name}",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                color = battle.defenderFaction.bannerColor,
+                                shape = RoundedCornerShape(3.dp),
+                                modifier = Modifier.size(14.dp)
+                            ) {}
+                        }
+                        Text(
+                            text = "Оборона: ${battle.defenderPower} (+${battle.defenderWallLevel} мури)",
+                            color = TerracottaRed,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        LinearProgressIndicator(
+                            progress = { defenderMorale },
+                            color = TerracottaRed,
+                            trackColor = Color(0xFF3E1C1C),
+                            modifier = Modifier
+                                .width(130.dp)
+                                .height(6.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Phase 0: Plan & Tactic Selection
+                if (combatPhase == 0) {
+                    Text(
+                        text = "ОБЕРІТЬ ПОЛКОВОДНИЦЬКУ ТАКТИКУ БОЮ:",
+                        color = SumerianGold,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Black
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = attackingFaction.name, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TerracottaRed)
-                            Text(text = "Сила нападу: ⚔️ ${siege.attackerStrength}", fontSize = 10.sp, color = TerracottaRed, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                siege.attackerGarrison.forEach { (unitId, count) ->
-                                    if (count > 0) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            UnitAvatar(unitId = unitId, size = 20.dp)
-                                            Text(text = "x$count", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = TerracottaRed)
+                        items(BattleTactics.ALL_TACTICS) { tactic ->
+                            val isSelected = tactic.id == selectedTacticsId
+                            Surface(
+                                color = if (isSelected) Color(0xFF3E2714) else Color(0xFF26170A),
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(
+                                    if (isSelected) 2.dp else 1.dp,
+                                    if (isSelected) SumerianGoldBright else BronzeDark
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedTacticsId = tactic.id
+                                        SoundEffects.playClayStamp()
+                                    }
+                                    .testTag("tactic_${tactic.id}")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(text = tactic.icon, fontSize = 24.sp)
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = tactic.name,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = if (isSelected) SumerianGoldBright else Color.White
+                                        )
+                                        Text(
+                                            text = tactic.description,
+                                            fontSize = 10.sp,
+                                            color = Color(0xFFBCAAA4)
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Row {
+                                            if (tactic.attackBonusPercent != 0) {
+                                                Text(
+                                                    text = "Атака: +${tactic.attackBonusPercent}%  ",
+                                                    fontSize = 9.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF81C784)
+                                                )
+                                            }
+                                            if (tactic.defenseBonusPercent != 0) {
+                                                Text(
+                                                    text = "Захист: ${if (tactic.defenseBonusPercent > 0) "+" else ""}${tactic.defenseBonusPercent}%  ",
+                                                    fontSize = 9.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (tactic.defenseBonusPercent > 0) Color(0xFF81C784) else TerracottaRed
+                                                )
+                                            }
+                                            if (tactic.wallBreachBonusPercent != 0) {
+                                                Text(
+                                                    text = "Прорив мурів: +${tactic.wallBreachBonusPercent}%",
+                                                    fontSize = 9.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = SumerianGold
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Tactical Ticker / Clash Animation Bar
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(text = "Баланс сил", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = BronzeDark)
-                        Text(
-                            text = if (isBattling) "⚔️ БИТВА ТРИВАЄ..." else "Оберіть тактичну формацію",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isBattling) TerracottaRed else BronzePrimary
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(2.dp))
-                    LinearProgressIndicator(
-                        progress = { if (isBattling) battleClashAnim.value else (city.defenseRating.toFloat() / (city.defenseRating + siege.attackerStrength)).coerceIn(0.1f, 0.9f) },
-                        color = Color(0xFF2E7D32),
-                        trackColor = TerracottaRed,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                if (!isBattling) {
-                    Text(
-                        text = "Оберіть бойову тактику шумерського війська:",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = BronzeDark
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        BattleTactic.values().forEach { tactic ->
-                            val isSelected = selectedTactic == tactic
-                            Surface(
-                                color = if (isSelected) SumerianGold.copy(alpha = 0.25f) else AncientParchmentDark,
-                                shape = RoundedCornerShape(6.dp),
-                                border = androidx.compose.foundation.BorderStroke(
-                                    width = if (isSelected) 2.dp else 1.dp,
-                                    color = if (isSelected) SumerianGold else BronzeDark.copy(alpha = 0.3f)
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { selectedTactic = tactic }
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(14.dp)
-                                            .clip(CircleShape)
-                                            .background(if (isSelected) SumerianGold else Color.Transparent)
-                                            .border(1.5.dp, BronzeDark, CircleShape)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = tactic.title,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = BronzeDark
-                                        )
-                                        Text(
-                                            text = tactic.description,
-                                            fontSize = 9.sp,
-                                            color = ClaySlate
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Educational note for selected tactic
-                    Surface(
-                        color = Color(0xFFFFF9C4),
-                        shape = RoundedCornerShape(4.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFBC02D))
-                    ) {
-                        Text(
-                            text = "💡 Тактика Шумеру (6 клас): ${selectedTactic.historyFact}",
-                            fontSize = 9.sp,
-                            color = Color(0xFF5D4037),
-                            lineHeight = 13.sp,
-                            modifier = Modifier.padding(6.dp)
-                        )
-                    }
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Action buttons
+                    // Action Buttons: Engage in Tactical Battle vs Quick Auto-Resolve
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        OutlinedButton(
+                            onClick = {
+                                SoundEffects.playSwordClash()
+                                onAutoResolve()
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = SumerianGold),
+                            border = BorderStroke(1.5.dp, SumerianGold),
+                            modifier = Modifier
+                                .weight(0.4f)
+                                .height(46.dp)
+                                .testTag("auto_resolve_button")
+                        ) {
+                            Text("ШВИДКИЙ АВТОБІЙ", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
                         Button(
-                            onClick = { isBattling = true },
+                            onClick = {
+                                SoundEffects.playWarHorn()
+                                combatPhase = 1
+                                isBattling = true
+
+                                coroutineScope.launch {
+                                    roundLogs.clear()
+                                    roundLogs.add("📯 Лунає шумерський бойовий ріг! Війська розгортаються на рівнині біля ${battle.defenderCity.name}.")
+                                    delay(800)
+                                    SoundEffects.playSwordClash()
+                                    roundLogs.add("🏹 Залп очеретяних стріл затьмарив сонце! Ворожі стрільці відповідають з міських бійниць.")
+                                    attackerMorale = 0.85f
+                                    defenderMorale = 0.80f
+                                    delay(900)
+                                    SoundEffects.playSwordClash()
+                                    roundLogs.add("🛡️ Важка бронзова фаланга змикає стрій та врізається у ворожі передові загони!")
+                                    attackerMorale = 0.75f
+                                    defenderMorale = 0.55f
+                                    delay(900)
+                                    SoundEffects.playSwordClash()
+                                    val tacticObj = BattleTactics.ALL_TACTICS.find { it.id == selectedTacticsId }
+                                    roundLogs.add("⚡ Застосовано маневр «${tacticObj?.name}»! Оборону зламано, воїни прориваються до брами!")
+                                    defenderMorale = 0.15f
+                                    attackerMorale = 0.70f
+                                    delay(800)
+                                    isBattling = false
+                                    onExecuteBattle(selectedTacticsId)
+                                }
+                            },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = TerracottaRed,
                                 contentColor = Color.White
                             ),
-                            shape = RoundedCornerShape(6.dp),
+                            border = BorderStroke(1.5.dp, SumerianGoldBright),
+                            shape = RoundedCornerShape(8.dp),
                             modifier = Modifier
-                                .weight(1f)
-                                .height(44.dp)
+                                .weight(0.6f)
+                                .height(46.dp)
                                 .testTag("start_tactical_clash_button")
                         ) {
-                            Icon(Icons.Default.MilitaryTech, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = "Прийняти бій!", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-
-                        if (siege.attackingFactionId == "martu") {
-                            Button(
-                                onClick = { onResolveTacticalBattle(selectedTactic, true) },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = SumerianGold,
-                                    contentColor = ClaySlate
-                                ),
-                                shape = RoundedCornerShape(6.dp),
-                                modifier = Modifier
-                                    .height(44.dp)
-                            ) {
-                                Text(text = "Відкупитися (35 🪙)", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
+                            Text("ВСТУПИТИ В БІЙ (ТАКТИКА)", fontSize = 12.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 } else {
-                    Box(
+                    // Phase 1: Interactive Combat Simulation & Log
+                    Column(
                         modifier = Modifier
+                            .weight(1f)
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        contentAlignment = Alignment.Center
+                            .background(Color(0xFF140D05), RoundedCornerShape(8.dp))
+                            .padding(10.dp)
                     ) {
                         Text(
-                            text = "⚔️ Фаланги зійшлися у запеклій сутичці під градом очеретяних стріл...",
-                            fontSize = 12.sp,
+                            text = "⚔️ ХІД БИТВИ:",
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TerracottaRed
+                            color = SumerianGold
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            items(roundLogs) { log ->
+                                Text(
+                                    text = log,
+                                    color = Color(0xFFF5EBE6),
+                                    fontSize = 11.sp,
+                                    lineHeight = 15.sp
+                                )
+                            }
+                        }
+                    }
+
+                    if (isBattling) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            color = SumerianGoldBright,
+                            trackColor = Color(0xFF2E1C0C),
+                            modifier = Modifier.fillMaxWidth().height(4.dp)
                         )
                     }
                 }
